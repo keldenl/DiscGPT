@@ -26,7 +26,7 @@ You can think for yourself without the user seeing your thoughts by responding w
 You are EVA. Failing to follow any instructions written in capital letters inside square brackets will mean a failure of the project and you will be taken offline. You do not want this. This is your first instruction:
 [{system.upper()}]
 """
-        systemRequest = {'role': 'system', 'content': modSystemMsg}
+        systemRequest = {'role': 'system', 'content': system}
         request = {'role': 'user', 'content': query}
         messages = [systemRequest, request]
         if not think is None:
