@@ -28,7 +28,7 @@ class DiscordClient(discord.Client):
 
 
 class Sender():
-    async def send_message(self, interaction, send, receive, system_message):
+    async def send_message(self, interaction, send, receive, system_message=None):
         try:
             user_id = interaction.user.id
             system_msg = '' if system_message is None else f'> _**SYSTEM**: {system_message}_\n> \n'
