@@ -14,7 +14,8 @@ class DiscordClient(discord.Client):
         self.synced = False
         self.added = False
         self.tree = discord.app_commands.CommandTree(self)
-        self.activity = discord.Activity(type=discord.ActivityType.watching, name="/chat | 🦙 react | /chat-advanced")
+        self.activity = discord.Activity(
+            type=discord.ActivityType.watching, name="/chat | 🦙 react | /chat-advanced")
 
     async def on_ready(self):
         await self.wait_until_ready()
@@ -28,16 +29,19 @@ class DiscordClient(discord.Client):
 
 
 class Sender():
-    async def send_message(self, interaction, send, receive, system_message=None):
+    async def send_message(self, interaction, send, receive, system_message=None, think=None, hide_system_thoughts=False):
         try:
             user_id = interaction.user.id
-            system_msg = '' if system_message is None else f'> _**SYSTEM**: {system_message}_\n> \n'
-            response = f'> <@{str(user_id)}>:  _{send}_\n\n**@EVA:**\n{receive}\n\n~~-                              -~~\n_Start a chat yourself by reacting to a message with 🦙 or typing /chat\nDisclaimer: Responses may not be accurate (Running {model_name})_'
-            await interaction.followup.send(system_msg + response)
+            system_msg = '' if hide_system_thoughts or system_message is None else f'> _**SYSTEM**: {system_message}_\n> \n'
+            think_msg = '' if hide_system_thoughts or think is None else f'> _[@EVA thinking: {think}]_\n> \n'
+            query = f'> <@{str(user_id)}>:  _{send}_\n\n'
+            response = f'**@EVA:**\n{receive}\n\n~~-                              -~~\n_Start a chat yourself by reacting to a message with 🦙 or typing /chat\nDisclaimer: Responses may not be accurate (Running {model_name})_'
+            await interaction.followup.send(system_msg + query + think_msg + response)
             logger.info(f"{user_id} sent: {send}, response: {receive}")
         except Exception as e:
             await interaction.followup.send('> **Error: Something went wrong, please try again later!**')
-            logger.exception(f"Error while sending:{send} in chatgpt model, error: {e}")
+            logger.exception(
+                f"Error while sending:{send} in chatgpt model, error: {e}")
 
     async def reply_message(self, message, receive, pending_message):
         try:
@@ -47,7 +51,8 @@ class Sender():
             logger.info(f"message replied sent: {receive}")
         except Exception as e:
             await message.reply('> **Error: Something went wrong, please try again later!**')
-            logger.exception(f"Error while replying to message in chatgpt model, error: {e}")
+            logger.exception(
+                f"Error while replying to message in chatgpt model, error: {e}")
 
     async def send_image(self, interaction, send, receive):
         try:
@@ -58,4 +63,5 @@ class Sender():
             logger.info(f"{user_id} sent: {send}, response: {receive}")
         except Exception as e:
             await interaction.followup.send('> **Error: Something went wrong, please try again later!**')
-            logger.exception(f"Error while sending:{send} in dalle model, error: {e}")
+            logger.exception(
+                f"Error while sending:{send} in dalle model, error: {e}")
