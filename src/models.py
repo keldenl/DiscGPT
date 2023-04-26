@@ -25,8 +25,8 @@ class OpenAIModel(ModelInterface):
         response = await openai.ChatCompletion.acreate(
             model=self.model_engine,
             messages=messages,
-            temperature=0.2,
-            top_p=0.9,
+            temperature=1,
+            top_p=0.05,
         )
         return response
 
