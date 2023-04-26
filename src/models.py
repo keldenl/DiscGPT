@@ -5,7 +5,7 @@ import openai
 
 
 class ModelInterface:
-    def chat_completion(self, messages: List[Dict]) -> str:
+    async def chat_completion(self, messages: List[Dict]) -> str:
         pass
 
     def image_generation(self, prompt: str) -> str:
@@ -21,8 +21,8 @@ class OpenAIModel(ModelInterface):
         self.model_engine = model_engine
         self.image_size = image_size
 
-    def chat_completion(self, messages) -> str:
-        response = openai.ChatCompletion.create(
+    async def chat_completion(self, messages) -> str:
+        response = await openai.ChatCompletion.acreate(
             model=self.model_engine,
             messages=messages,
             temperature=1,

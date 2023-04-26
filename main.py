@@ -27,21 +27,22 @@ def run():
 
     @client.tree.command(name="chat", description="Have a chat with EVA")
     async def chat(interaction: discord.Interaction, *, message: str):
-        user_id = interaction.user.id
+        user_id = interaction.user.id # username: interaction.user.name
         if interaction.user == client.user:
             return
         await interaction.response.defer()
-        receive = chatgpt.get_response(
-            user_id, 'My name is "' + interaction.user.name + '". ' + message)
+        receive = await chatgpt.get_response(
+            user_id, message)
         await sender.send_message(interaction, message, receive)
 
-    @client.tree.command(name="chat_advanced", description="Have a custom chat")
+    @client.tree.command(name="chat_advanced", description="Have a custom chat with a system message")
     async def chat(interaction: discord.Interaction, *, system_message: str, message: str):
-        user_id = interaction.user.id
+        user_id = interaction.user.id # username: interaction.user.name
         if interaction.user == client.user:
             return
+        chatgpt.clean_history(user_id)
         await interaction.response.defer()
-        receive = chatgpt.get_response_with_system(
+        receive = await chatgpt.get_response_with_system(
             user_id, system_message, message)
         await sender.send_message(interaction, message, receive, system_message)
 
@@ -50,8 +51,8 @@ def run():
         user_id = interaction.user.id
         logger.info(f"resetting memory from {user_id}")
         try:
-            chatgpt.clean_history(user_id)
             await interaction.response.defer(ephemeral=True)
+            chatgpt.clean_history(user_id)
             await interaction.followup.send(f'> Reset ChatGPT conversation history < - <@{user_id}>')
         except Exception as e:
             logger.error(f"Error resetting memory: {e}")
@@ -63,11 +64,10 @@ def run():
             message = reaction.message
             content = message.content
             pending_message = await message.reply('_EVA is typing..._')
-            receive = chatgpt.get_response(
+            receive = await chatgpt.get_response(
                 user.id, 'My name is "' + user.name + '". ' + content)
             await sender.reply_message(message, receive, pending_message)
 
-    
     # ImageGen not supported
     # @client.tree.command(name="imagine", description="Generate image from text")
     # async def imagine(interaction: discord.Interaction, *, prompt: str):
