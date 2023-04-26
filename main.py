@@ -38,7 +38,7 @@ def run():
         await sender.send_message(interaction, message, receive, system_message, think, hide_system_thoughts)
 
     # Personalities
-    personalities = {
+    plugins = {
         'deez_nuts': {'system_message': 'Respond to each user message with a deez nuts joke. A deez nuts joke is when you reply and rephrase the original statement the user made, but add the words DEEZ NUTZ in itas a response to confuse the user and be funny',
                       'think': 'This is a perfect opportunity to respond with a "deez nuts" joke as instructed. Here comes my response..'}
     }
@@ -59,7 +59,7 @@ def run():
 
     @client.tree.command(name="deez_nuts", description="Hit them with a deez nuts joke")
     async def deez_chat(interaction: discord.Interaction, *, message: str):
-        deez_nuts = personalities['deez_nuts']
+        deez_nuts = plugins['deez_nuts']
         await system_chat(interaction, deez_nuts['system_message'], message, deez_nuts['think'], True)
 
     @client.tree.command(name="reset", description="Reset ChatGPT conversation history")
@@ -76,12 +76,20 @@ def run():
 
     @client.event
     async def on_reaction_add(reaction, user):
+        message = reaction.message
+        content = message.content  # username: user.name
         if reaction.emoji == '🦙':
-            message = reaction.message
-            content = message.content  # username: user.name
             pending_message = await message.reply('_EVA is typing..._')
             receive = await chatgpt.get_response(content)
             await sender.reply_message(message, receive, pending_message)
+            return
+        if reaction.emoji == '🥜':
+            pending_message = await message.reply('_EVA is 🥜 typing..._')
+            dn = plugins['deez_nuts']
+            receive = await chatgpt.get_response_with_system(user.id, dn['system_message'], content, dn['think'])
+            await sender.reply_message(message, receive, pending_message)
+            return
+
 
     # ImageGen not supported
     # @client.tree.command(name="imagine", description="Generate image from text")
