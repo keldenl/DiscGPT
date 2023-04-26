@@ -24,7 +24,6 @@ class Memory(MemoryInterface):
         }]
 
     def append(self, user_id: str, message: Dict) -> None:
-        print(user_id)
         if self.storage[user_id] == []:
             self.initialize(user_id)
         self.storage[user_id].append(message)

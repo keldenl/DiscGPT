@@ -37,14 +37,13 @@ def run():
 
     @client.tree.command(name="chat_advanced", description="Have a custom chat")
     async def chat(interaction: discord.Interaction, *, system_message: str, message: str):
-        print(system_message)
         user_id = interaction.user.id
         if interaction.user == client.user:
             return
         await interaction.response.defer()
         receive = chatgpt.get_response_with_system(
             user_id, system_message, message)
-        await sender.send_message(interaction, message, receive)
+        await sender.send_message(interaction, message, receive, system_message)
 
     @client.tree.command(name="reset", description="Reset ChatGPT conversation history")
     async def reset(interaction: discord.Interaction):

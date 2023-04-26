@@ -28,11 +28,12 @@ class DiscordClient(discord.Client):
 
 
 class Sender():
-    async def send_message(self, interaction, send, receive):
+    async def send_message(self, interaction, send, receive, system_message):
         try:
             user_id = interaction.user.id
+            system_msg = '' if system_message is None else f'> _**SYSTEM**: {system_message}_\n> \n'
             response = f'> <@{str(user_id)}>:  _{send}_\n\n**@EVA:**\n{receive}\n\n~~-                              -~~\n_Start a chat yourself by reacting to a message with 🦙 or typing /chat\nDisclaimer: Responses may not be accurate (Running {model_name})_'
-            await interaction.followup.send(response)
+            await interaction.followup.send(system_msg + response)
             logger.info(f"{user_id} sent: {send}, response: {receive}")
         except Exception as e:
             await interaction.followup.send('> **Error: Something went wrong, please try again later!**')

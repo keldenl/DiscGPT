@@ -21,7 +21,6 @@ class ChatGPT:
         systemRequest = {'role': 'system', 'content': system}
         request = {'role': 'user', 'content': query}
         response = self.model.chat_completion([systemRequest, request])
-        print(response)
         content = response['choices'][0]['message']['content']
         return content
 

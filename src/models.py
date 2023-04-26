@@ -24,7 +24,9 @@ class OpenAIModel(ModelInterface):
     def chat_completion(self, messages) -> str:
         response = openai.ChatCompletion.create(
             model=self.model_engine,
-            messages=messages
+            messages=messages,
+            temperature=1,
+            top_p=0.1,
         )
         return response
 
