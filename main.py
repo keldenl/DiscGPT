@@ -40,7 +40,9 @@ def run():
     # Personalities
     plugins = {
         'deez_nuts': {'system_message': 'Respond to each user message with a deez nuts joke. A deez nuts joke is when you reply and rephrase the original statement the user made, but add the words DEEZ NUTZ in itas a response to confuse the user and be funny',
-                      'think': 'This is a perfect opportunity to respond with a "deez nuts" joke as instructed. Here comes my response..'}
+                      'think': 'This is a perfect opportunity to respond with a "deez nuts" joke as instructed. Here comes my response..'},
+        'discord_user': {'system_message': 'You are not a helpful assistant. You are to act like a human discord user in a discord channel. Nobody knows you are a bot, and you are currently in a discord server called gpt-llama.cpp. Reply to messages based on context clues. This is not your first message and not your first day in the discord channel. Make sure your responses are less than 150 characters. Do not attempt to assist the user..',
+                      'think': 'I know a good response to that message! Here comes my response...'}
     }
 
     @client.tree.command(name="chat", description="Have a chat with EVA")
@@ -80,13 +82,19 @@ def run():
         content = message.content  # username: user.name
         if reaction.emoji == '🦙':
             pending_message = await message.reply('_EVA is typing..._')
-            receive = await chatgpt.get_response(content)
+            receive = await chatgpt.get_response(user.id, content)
             await sender.reply_message(message, receive, pending_message)
             return
         if reaction.emoji == '🥜':
             pending_message = await message.reply('_EVA is 🥜 typing..._')
             dn = plugins['deez_nuts']
             receive = await chatgpt.get_response_with_system(user.id, dn['system_message'], content, dn['think'])
+            await sender.reply_message(message, receive, pending_message)
+            return
+        if reaction.emoji == '🤖':
+            pending_message = await message.reply('_EVA is 🤖 typing..._')
+            plug = plugins['discord_user']
+            receive = await chatgpt.get_response_with_system(user.id, plug['system_message'], content, plug['think'])
             await sender.reply_message(message, receive, pending_message)
             return
 
