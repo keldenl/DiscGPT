@@ -1,12 +1,12 @@
+import os
 import discord
+import random
+
 from src.logger import logger
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.reactions = True
-
-model_name = 'Vicuna 7B'
-
 
 class DiscordClient(discord.Client):
     def __init__(self) -> None:
@@ -16,6 +16,7 @@ class DiscordClient(discord.Client):
         self.tree = discord.app_commands.CommandTree(self)
         self.activity = discord.Activity(
             type=discord.ActivityType.watching, name="/chat | 🦙 react | /chat-advanced")
+
 
     async def on_ready(self):
         await self.wait_until_ready()
@@ -29,13 +30,19 @@ class DiscordClient(discord.Client):
 
 
 class Sender():
+    bot_name = os.getenv('BOT_NAME')
+    model_name = os.getenv('MODEL_NAME')
+
     async def send_message(self, interaction, send, receive, system_message=None, think=None, hide_system_thoughts=False):
         try:
             user_id = interaction.user.id
             system_msg = '' if hide_system_thoughts or system_message is None else f'> _**SYSTEM**: {system_message}_\n> \n'
-            think_msg = '' if hide_system_thoughts or think is None else f'> _[@EVA thinking: {think}]_\n> \n'
+            think_msg = '' if hide_system_thoughts or think is None else f'> _[@{self.bot_name} thinking: {think}]_\n> \n'
             query = f'> <@{str(user_id)}>:  _{send}_\n\n'
-            response = f'**@EVA:**\n{receive}\n\n~~-                              -~~\n_Start a chat yourself by reacting to a message with 🦙 or typing /chat\nDisclaimer: Responses may not be accurate (Running {model_name})_'
+            response = f'**@{self.bot_name}:**\n{receive}'
+            tagline = f'\n\n_Start a chat yourself by reacting with 🤖/🦙 or typing `/chat`\nDisclaimer: Responses may not be accurate (Running {self.model_name})_'
+            if random.random() < 0.1:
+                response = response + tagline
             await interaction.followup.send(system_msg + query + think_msg + response)
             logger.info(f"{user_id} sent: {send}, response: {receive}")
         except Exception as e:
@@ -44,10 +51,15 @@ class Sender():
                 f"Error while sending:{send} in chatgpt model, error: {e}")
 
     async def reply_message(self, message, receive, pending_message):
+        print(self)
         try:
-            response = f'{receive}\n~~-                              -~~\n_Start a chat yourself by reacting to a message with 🦙 or typing /chat\nDisclaimer: Responses may not be accurate (Running 1.1 Vicuna 7B)_'
+            response = f'{receive}'
+            tagline = f'\n\n_Start a chat yourself by reacting with 🤖/🦙 or typing `/chat`\nDisclaimer: Responses may not be accurate (Running {self.model_name})_'
+            if random.random() < 0.1:
+                response = response + tagline
             await pending_message.delete()
             await message.reply(response)
+                
             logger.info(f"message replied sent: {receive}")
         except Exception as e:
             await message.reply('> **Error: Something went wrong, please try again later!**')
