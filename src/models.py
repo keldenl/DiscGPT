@@ -27,6 +27,7 @@ class OpenAIModel(ModelInterface):
             messages=messages,
             temperature=1,
             top_p=0.05,
+            max_tokens=2000/4, # 1 token ~= 4 characters. discord limit = 2000 characters
         )
         return response
 
