@@ -67,11 +67,6 @@ def run():
     async def system_cmd(interaction: discord.Interaction, *, system_message: str, message: str, think: Optional[str] = None):
         await system_chat(interaction, system_message, message, think)
 
-    @client.tree.command(name="deez_nuts", description="Hit them with a deez nuts joke")
-    async def deez_chat(interaction: discord.Interaction, *, message: str):
-        deez_nuts = plugins['deez_nuts']
-        await system_chat(interaction, deez_nuts['system_message'], message, deez_nuts['think'], True)
-
     @client.tree.command(name="reset", description="Reset ChatGPT conversation history")
     async def reset(interaction: discord.Interaction):
         user_id = interaction.user.id
