@@ -8,6 +8,12 @@ class ModelInterface:
     async def chat_completion(self, messages: List[Dict]) -> str:
         pass
 
+    def update_api_key(self, api_key: str):
+        pass
+
+    def reset_api_key(self):
+        pass
+
     def image_generation(self, prompt: str) -> str:
         pass
 
@@ -21,12 +27,18 @@ class OpenAIModel(ModelInterface):
         self.model_engine = model_engine
         self.image_size = image_size
 
+    def update_api_key(self, api):
+        openai.api_key = api
+    
+    def reset_api_key(self):
+        openai.api_key = os.getenv('OPENAI_API')
+
     async def chat_completion(self, messages) -> str:
         response = await openai.ChatCompletion.acreate(
             model=self.model_engine,
             messages=messages,
             temperature=1,
-            top_p=0.05,
+            top_p=0.1,
             max_tokens=2000/4, # 1 token ~= 4 characters. discord limit = 2000 characters
         )
         return response
