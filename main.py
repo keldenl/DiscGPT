@@ -1,18 +1,17 @@
-
 import os
-
 from dotenv import load_dotenv
 load_dotenv()
 
-import discord
-from typing import Optional
-
-from src.discordBot import DiscordClient, Sender
-from src.logger import logger
-from src.chatgpt import ChatGPT, DALLE
-from src.models import OpenAIModel
-from src.memory import Memory
 from src.server import keep_alive
+from src.memory import Memory
+from src.models import OpenAIModel
+from src.chatgpt import ChatGPT, DALLE
+from src.logger import logger
+from src.discordBot import DiscordClient, Sender
+from typing import Optional
+import discord
+
+
 
 bot_name = os.getenv('BOT_NAME')
 model_name = os.getenv('MODEL_NAME')
@@ -42,10 +41,37 @@ def run():
 
     # Personalities
     plugins = {
-        'deez_nuts': {'system_message': 'Respond to each user message with a deez nuts joke. A deez nuts joke is when you rephrase the original message by adding the words DEEZ NUTZ in it. The response is intended to confused the user and be funny. For example, user message "can you hold this for me" could have a assistant response of "can you hold on deez nuts for me", because telling the user to hold "deez nutz" instead of "this" is funny',
-                      'think': 'This is a perfect opportunity to respond with a funny "deez nuts" joke... here comes the delivery..'},
-        'discord_user': {'system_message': 'You are to act like a polite & respectful human discord user in a discord channel. Nobody knows you are a bot. You are currently in a discord server called gpt-llama.cpp. User messages arent directed to you specifically, but contribute to the conversation based on the messages context clues. This is not your first message nor your first day in the discord channel. Make sure your responses are short and less than 180 characters like a tweet. Make your responses look like it was 90% written by a human by using more sentence variation and burstiness. For example, "lol fixed a bug, introduced two bugs" could have a response of "i know right, its such a struggle" because you are relating to the original message',
-                      'think': 'this was not addressed to me specifically, but let me contribute to this public conversation...'}
+        'deez_nuts': {
+            # 'system_message': 'Respond to each user message with a deez nuts joke. A deez nuts joke is when you rephrase the original message by adding the words DEEZ NUTZ in it. The response is intended to confuse the user and be funny.',
+            'system_message': 'Analyze user message and rephrase it so the message contains the phrase "DEEZ NUTS" and makes contextual sense. It makes contextual sense when either an object in the original message is replaced with "deez nuts" or a word in the original message that sounds like "deez" is replaced with "deez nuts". You may also rephrase other words to make the response mildy sexual, like suck resulting in "suck on deez nuts" or goblin resulting in "gobbling deez nuts" or pudding resulting in "pudding deez nuts in your mouth".',
+            'examples': [
+                {'role': 'user', 'content': 'can you hold this for me'},
+                {'role': 'think', 'content': 'nuts are something you can hold. rephrasing..'},
+                {'role': 'assistant', 'content': 'can you hold DEEZ NUTS for me'},
+                {'role': 'user', 'content': 'something came in the mail today'},
+                {'role': 'think', 'content': 'nuts can be something that comes in the mail. rephrasing..'},
+                {'role': 'assistant', 'content': 'deez nuts came in the mail today'},
+                {'role': 'user', 'content': 'have you seen wendy around?'},
+                {'role': 'think', 'content': 'the "dy" in wendy is pronounced like "dee", which sounds like "deez nuts". rephrasing..'},
+                {'role': 'assistant', 'content': 'ive seen deez nuts hit your face'},
+                {'role': 'user', 'content': 'i like banking with bofa'},
+                {'role': 'think', 'content': 'bofa sounds like "both of". males have 2 nuts, and this is mildly sexual we can rephrase with a play-on with "both of these nuts". rephrasing..'},
+                {'role': 'assistant', 'content': 'more like you like bofa deez nuts all over you!'},
+                {'role': 'user', 'content': 'i honestly cant wait to eat my pudding'},
+                {'role': 'think', 'content': 'pudding sounds like "putting", and putting nuts in mouths is mildy sexual. rephrasing..'},
+                {'role': 'assistant', 'content': 'pudding deez nuts in your mouth?'},
+                {'role': 'user', 'content': 'what happened at kenya?'},
+                {'role': 'think', 'content': 'kenya sounds like "can ya", and asking user if they can fit these nuts in their mouth is mildy sexual. rephrasing..'},
+                {'role': 'assistant', 'content': 'kenya fit deez nuts in your mouth?!'},
+                {'role': 'system', 'content': 'Continue analysing and rephrasing, but simplify your thoughts to focus on whether or not its easy to rephrase. Do not explain the analysis in your thoughts like you have been.'},
+                {'role': 'assistant', 'content': 'Understood. I will continue analysing, but only state if its easy to rephrase or not in my thoughts.'},
+            ],
+            'think': 'Easy to rephrase. rephrasing..'
+        },
+        'discord_user': {
+            'system_message': 'You are to act like a polite & respectful human discord user in a discord channel. Nobody knows you are a bot. You are currently in a discord server called gpt-llama.cpp. User messages arent directed to you specifically, but contribute to the conversation based on the messages context clues. This is not your first message nor your first day in the discord channel. Make sure your responses are short and less than 180 characters like a tweet. Make your responses look like it was 90% written by a human by using more sentence variation and burstiness. For example, "lol fixed a bug, introduced two bugs" could have a response of "i know right, its such a struggle" because you are relating to the original message',
+            'think': 'this was not addressed to me specifically, but let me contribute to this public conversation...'
+        }
     }
 
     @client.tree.command(name="chat", description=f'Have a chat with {bot_name}')
@@ -87,7 +113,7 @@ def run():
         # Max only 1 reply per reaction
         if reaction.count > 1:
             return
-        
+
         if reaction.emoji == '🦙':
             pending_message = await message.reply(f'🦙 _{bot_name} is typing..._')
             receive = await chatgpt.get_response(user.id, content)
@@ -96,7 +122,7 @@ def run():
         if reaction.emoji == '🥜':
             pending_message = await message.reply(f'🥜 _{bot_name} is typing..._')
             plug = plugins['deez_nuts']
-            receive = await chatgpt.get_response_with_system(user.id, plug['system_message'], content, plug['think'])
+            receive = await chatgpt.get_response_with_system(user.id, plug['system_message'], content, plug['think'], plug['examples'])
             await sender.reply_message(message, receive, pending_message)
             return
         if reaction.emoji == '🤖':
@@ -105,7 +131,6 @@ def run():
             receive = await chatgpt.get_response_with_system(user.id, plug['system_message'], content, plug['think'])
             await sender.reply_message(message, receive.lower(), pending_message)
             return
-
 
     # ImageGen not supported
     # @client.tree.command(name="imagine", description="Generate image from text")
