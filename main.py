@@ -144,7 +144,7 @@ def run():
 
         bot_not_mentioned = bot_name.lower() not in message.content.lower() and f'<@{client.user.id}>' not in message.content
         is_reply_to_bot = message.reference is not None and message.reference.resolved.author == client.user
-        if not is_reply_to_bot and bot_not_mentioned and r > response_probability:
+        if (not is_reply_to_bot) and bot_not_mentioned and r > response_probability:
             return
         
         print(f'{bot_name} auto-generating a message...')
