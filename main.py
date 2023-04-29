@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import discord
+import random
 from typing import Optional
 from src.discordBot import DiscordClient, Sender
 from src.logger import logger
@@ -26,6 +27,7 @@ dalle = DALLE(models)
 def run():
     client = DiscordClient()
     sender = Sender()
+
 
     # Utils
 
@@ -122,6 +124,51 @@ def run():
             await interaction.followup.send('> Oops! Something went wrong. <')
 
     @client.event
+    async def on_message(message):
+        # don't react to your own messages
+        if message.author == client.user:
+            return
+        
+        # respond if addressed
+        # if not addressed only respond to 10% of the messages
+        if (bot_name.lower() not in message.content.lower()) and random.random() > 0.05:
+            return
+        
+        print(f'{bot_name} auto-generating a message...')
+
+        # content = message.content  # username: user.name
+        channel = message.channel
+        # if random.random() < 0.1:
+
+        # Get last 30 messages in the channel
+        messages = [message async for message in channel.history(limit=20)]
+        message_history = []
+
+        # Just get the last 20 before the current message
+        for i, msg in enumerate(messages):
+            if msg.id == message.id:
+                message_history = messages[i:i+15]
+        message_history.reverse() # they come in reversed order
+
+        # Replace author bot_name with 'You' for the prompt
+        # Replace bot responses (starting with 🤖) with "Bot" author. This is so we don't confuse "you" with being the bot
+        message_history_str = "\n".join(f"{'Bot' if m.content.startswith('🤖') else 'You' if m.author.name == bot_name else m.author.name}: {m.content}" for m in message_history)
+        
+        authors = [message.author.name for message in message_history if message.author.name != bot_name]
+        authors = list(set(authors)) # get unique set of authors
+        author_names = ", ".join(authors)
+
+        prompt = f"""You, {author_names} are users on a public #{message.channel.name} channel of a discord server. You are {bot_name}. You guys are having a fun conversations:
+{message_history_str}
+You:"""
+        async with channel.typing():
+            receive = await chatgpt.get_text_completion(prompt, '\n', True)
+            receive = ':no_mouth:' if len(receive) == 0 else receive # response with :no_mouth: if the response failed
+        await sender.send_human_message(receive.lower(), channel)
+        return
+
+
+    @client.event
     async def on_reaction_add(reaction, user):
         message = reaction.message
         content = message.content  # username: user.name
@@ -147,33 +194,33 @@ def run():
                 receive = await chatgpt.get_response_with_system(message.author, plug['system_message'], content, plug['think'], plug['examples'])
                 await sender.reply_message(message, receive)
                 return
-        if reaction.emoji == '🤖':
-            # Get last 30 messages in the channel
-            messages = [message async for message in channel.history(limit=30)]
-            message_history = []
+#         if reaction.emoji == '🤖':
+#             # Get last 30 messages in the channel
+#             messages = [message async for message in channel.history(limit=30)]
+#             message_history = []
 
-            # Just get the last 20 before the current message
-            for i, msg in enumerate(messages):
-                if msg.id == message.id:
-                    message_history = messages[i:i+25]
-            message_history.reverse() # they come in reversed order
+#             # Just get the last 20 before the current message
+#             for i, msg in enumerate(messages):
+#                 if msg.id == message.id:
+#                     message_history = messages[i:i+25]
+#             message_history.reverse() # they come in reversed order
 
-            # Replace author bot_name with 'You' for the prompt
-            # Replace bot responses (starting with 🤖) with "Bot" author. This is so we don't confuse "you" with being the bot
-            message_history_str = "\n".join(f"{'Bot' if m.content.startswith('🤖') else 'You' if m.author.name == bot_name else m.author.name}: {m.content}" for m in message_history)
+#             # Replace author bot_name with 'You' for the prompt
+#             # Replace bot responses (starting with 🤖) with "Bot" author. This is so we don't confuse "you" with being the bot
+#             message_history_str = "\n".join(f"{'Bot' if m.content.startswith('🤖') else 'You' if m.author.name == bot_name else m.author.name}: {m.content}" for m in message_history)
             
-            authors = [message.author.name for message in message_history if message.author.name != bot_name]
-            authors = list(set(authors)) # get unique set of authors
-            author_names = ", ".join(authors)
+#             authors = [message.author.name for message in message_history if message.author.name != bot_name]
+#             authors = list(set(authors)) # get unique set of authors
+#             author_names = ", ".join(authors)
 
-            prompt = f"""You, {author_names} are users on a public #{message.channel.name} channel of a discord server. Your name is {bot_name}. You guys are having a fun conversations:
-{message_history_str}
-You:"""
-            async with channel.typing():
-                receive = await chatgpt.get_text_completion(prompt, '\n', True)
-                receive = ':no_mouth:' if len(receive) == 0 else receive # response with :no_mouth: if the response failed
-            await sender.send_human_message(receive.lower(), channel)
-            return
+#             prompt = f"""You, {author_names} are users on a public #{message.channel.name} channel of a discord server. Your name is {bot_name}. You guys are having a fun conversations:
+# {message_history_str}
+# You:"""
+#             async with channel.typing():
+#                 receive = await chatgpt.get_text_completion(prompt, '\n', True)
+#                 receive = ':no_mouth:' if len(receive) == 0 else receive # response with :no_mouth: if the response failed
+#             await sender.send_human_message(receive.lower(), channel)
+#             return
 
     # ImageGen not supported
     # @client.tree.command(name="imagine", description="Generate image from text")
