@@ -125,49 +125,53 @@ def run():
     async def on_reaction_add(reaction, user):
         message = reaction.message
         content = message.content  # username: user.name
+        channel = message.channel
 
         # Max only 1 reply per reaction
         if reaction.count > 1:
             return
 
         if reaction.emoji == '🦙':
-            pending_message = await message.reply(f'🦙 _{bot_name} is typing..._')
-            receive = await chatgpt.get_text_completion(user.id, content)
-            await sender.reply_message(message, receive, pending_message)
-            return
+            async with channel.typing():
+                receive = await chatgpt.get_text_completion(user.id, content)
+                await sender.reply_message(message, receive)
+                return
         if reaction.emoji == '➕':
-            pending_message = await message.reply(f'➕ _{bot_name} is typing..._')
-            receive = await chatgpt.get_text_completion(content)
-            await sender.reply_message(message, receive, pending_message)
-            return
+            async with channel.typing():
+                receive = await chatgpt.get_text_completion(content)
+                await sender.reply_message(message, receive)
+                return
         if reaction.emoji == '🥜':
-            pending_message = await message.reply(f'🥜 _{bot_name} is typing..._')
-            plug = plugins['deez_nuts']
-            receive = await chatgpt.get_response_with_system(message.author, plug['system_message'], content, plug['think'], plug['examples'])
-            await sender.reply_message(message, receive, pending_message)
-            return
+            async with channel.typing():
+                plug = plugins['deez_nuts']
+                receive = await chatgpt.get_response_with_system(message.author, plug['system_message'], content, plug['think'], plug['examples'])
+                await sender.reply_message(message, receive)
+                return
         if reaction.emoji == '🤖':
-            channel = message.channel
+            # Get last 30 messages in the channel
             messages = [message async for message in channel.history(limit=30)]
             message_history = []
+
+            # Just get the last 20 before the current message
             for i, msg in enumerate(messages):
                 if msg.id == message.id:
                     message_history = messages[i:i+25]
+            message_history.reverse() # they come in reversed order
+
+            # Replace author bot_name with 'You' for the prompt
+            # Replace bot responses (starting with 🤖) with "Bot" author. This is so we don't confuse "you" with being the bot
+            message_history_str = "\n".join(f"{'Bot' if m.content.startswith('🤖') else 'You' if m.author.name == bot_name else m.author.name}: {m.content}" for m in message_history)
             
-            message_history.reverse()
-            message_history_str = "\n".join(f"{'You' if m.author.name == bot_name else m.author.name}: {m.content}" for m in message_history)
-            authors = [message.author for message in message_history if message.author.name != bot_name]
-            authors = list(set(authors))
-            # <@{author.id}>
-            author_names = ", ".join(f"{author.name}" for author in authors)
+            authors = [message.author.name for message in message_history if message.author.name != bot_name]
+            authors = list(set(authors)) # get unique set of authors
+            author_names = ", ".join(authors)
 
             prompt = f"""You, {author_names} are users on a public #{message.channel.name} channel of a discord server. Your name is {bot_name}. You guys are having a fun conversations:
 {message_history_str}
 You:"""
-
             async with channel.typing():
                 receive = await chatgpt.get_text_completion(prompt, '\n', True)
-                receive = ':no_mouth:' if len(receive) == 0 else receive
+                receive = ':no_mouth:' if len(receive) == 0 else receive # response with :no_mouth: if the response failed
             await sender.send_human_message(receive.lower(), channel)
             return
 

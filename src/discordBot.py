@@ -43,7 +43,7 @@ class Sender():
             tagline = f'\n\n_Start a chat yourself by reacting with 🤖/🦙 or typing `/chat`\nDisclaimer: Responses may not be accurate (Running {self.model_name})_'
             if random.random() < 0.1:
                 response = response + tagline
-            await interaction.followup.send(system_msg + query + think_msg + response)
+            await interaction.followup.send('🤖' + system_msg + query + think_msg + response)
             logger.info(f"{user_id} sent: {send}, response: {receive}")
         except Exception as e:
             await interaction.followup.send('> **Error: Something went wrong, please try again later!**')
@@ -58,14 +58,15 @@ class Sender():
             logger.exception(
                 f"Error while replying to message in chatgpt model, error: {e}")
 
-    async def reply_message(self, message, receive, pending_message):
+    async def reply_message(self, message, receive, pending_message=None):
         try:
             response = f'{receive}'
             tagline = f'\n\n_Start a chat yourself by reacting with 🤖/🦙 or typing `/chat`\nDisclaimer: Responses may not be accurate (Running {self.model_name})_'
             if random.random() < 0.1:
                 response = response + tagline
-            await pending_message.delete()
-            await message.reply(response)
+            if not pending_message is None:
+                await pending_message.delete() 
+            await message.reply('🤖' + response)
                 
             logger.info(f"message replied sent: {receive}")
         except Exception as e:
