@@ -1,8 +1,10 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
 import discord
 import random
+from datetime import datetime
 from typing import Optional
 from src.discordBot import DiscordClient, Sender
 from src.logger import logger
@@ -10,7 +12,7 @@ from src.chatgpt import ChatGPT, DALLE
 from src.models import OpenAIModel
 from src.memory import Memory
 from src.server import keep_alive
-import os
+import utils
 
 
 bot_name = os.getenv('BOT_NAME')
@@ -125,13 +127,24 @@ def run():
 
     @client.event
     async def on_message(message):
+        response_probability = 0.1
+
+        # don't react to system message or unreadable messages
+        if message.content == '':
+            return
+
         # don't react to your own messages
         if message.author == client.user:
             return
         
         # respond if addressed
         # if not addressed only respond to 10% of the messages
-        if (bot_name.lower() not in message.content.lower()) and random.random() > 0.05:
+        r = random.random()
+        message.type == "Message"
+
+        bot_not_mentioned = bot_name.lower() not in message.content.lower() and f'<@{client.user.id}>' not in message.content
+        is_reply_to_bot = message.reference is not None and message.reference.resolved.author == client.user
+        if not is_reply_to_bot and bot_not_mentioned and r > response_probability:
             return
         
         print(f'{bot_name} auto-generating a message...')
@@ -150,21 +163,27 @@ def run():
                 message_history = messages[i:i+15]
         message_history.reverse() # they come in reversed order
 
-        # Replace author bot_name with 'You' for the prompt
-        # Replace bot responses (starting with 🤖) with "Bot" author. This is so we don't confuse "you" with being the bot
-        message_history_str = "\n".join(f"{'Bot' if m.content.startswith('🤖') else 'You' if m.author.name == bot_name else m.author.name}: {m.content}" for m in message_history)
-        
+        # Get authors
+        authors_full_list = [message.author for message in message_history]
+        authors_name_to_id, authors_id_to_name = utils.create_id_name_hashmaps(authors_full_list)
+
         authors = [message.author.name for message in message_history if message.author.name != bot_name]
         authors = list(set(authors)) # get unique set of authors
         author_names = ", ".join(authors)
 
-        prompt = f"""You, {author_names} are users on a public #{message.channel.name} channel of a discord server. You are {bot_name}. You guys are having a fun conversations:
+        # Replace author bot_name with 'You' for the prompt
+        # Replace bot responses (starting with 🤖) with "Bot" author. This is so we don't confuse "you" with being the bot
+        message_history_str = "\n\n".join(f"{'Bot' if m.content.startswith('🤖') else f'You ({bot_name})' if m.author.name == bot_name else m.author.name} [{m.created_at.strftime('%H:%M:%S %m-%d-%Y')}]:\n{utils.replace_string(m.content, authors_id_to_name)}" for m in message_history)
+
+        prompt = f"""You, {author_names} are users on a public #{message.channel.name} channel of a discord server. You are {bot_name}. Each message is formatted in a "<NAME> [DATE]: <MESSAGE>" format, and you guys refer to each other with "@NAME". {bot_name} seems to be very capable at coding and answering questions despite being just human. You guys are having a fun, non-repetitive conversation:
+
 {message_history_str}
-You:"""
+
+You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
         async with channel.typing():
-            receive = await chatgpt.get_text_completion(prompt, '\n', True)
+            receive = await chatgpt.get_text_completion(prompt, '\n\n', True)
             receive = ':no_mouth:' if len(receive) == 0 else receive # response with :no_mouth: if the response failed
-        await sender.send_human_message(receive.lower(), channel)
+        await sender.send_human_message(utils.replace_string(receive, authors_name_to_id).lower(), channel)
         return
 
 
