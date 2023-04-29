@@ -167,7 +167,7 @@ You:"""
 
             async with channel.typing():
                 receive = await chatgpt.get_text_completion(prompt, '\n', True)
-                receive = ':robot:' if len(receive) == 0 else receive
+                receive = ':no_mouth:' if len(receive) == 0 else receive
             await sender.send_human_message(receive.lower(), channel)
             return
 
