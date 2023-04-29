@@ -127,7 +127,7 @@ def run():
 
     @client.event
     async def on_message(message):
-        response_probability = 0.1
+        response_probability = 0.25
 
         # don't react to system message or unreadable messages
         if message.content == '':
@@ -148,10 +148,7 @@ def run():
             return
         
         print(f'{bot_name} auto-generating a message...')
-
-        # content = message.content  # username: user.name
         channel = message.channel
-        # if random.random() < 0.1:
 
         # Get last 30 messages in the channel
         messages = [message async for message in channel.history(limit=20)]
@@ -175,7 +172,7 @@ def run():
         # Replace bot responses (starting with 🤖) with "Bot" author. This is so we don't confuse "you" with being the bot
         message_history_str = "\n\n".join(f"{'Bot' if m.content.startswith('🤖') else f'You ({bot_name})' if m.author.name == bot_name else m.author.name} [{m.created_at.strftime('%H:%M:%S %m-%d-%Y')}]:\n{utils.replace_string(m.content, authors_id_to_name)}" for m in message_history)
 
-        prompt = f"""You, {author_names} are users on a public #{message.channel.name} channel of a discord server. You are {bot_name}. Each message is formatted in a "<NAME> [DATE]: <MESSAGE>" format, and you guys refer to each other with "@NAME". {bot_name} seems to be very capable at coding and answering questions despite being just human. You guys are having a fun, non-repetitive conversation:
+        prompt = f"""You, {author_names} are users on a public #{message.channel.name} channel of a discord server. You are {bot_name}, an active and fun discord member of the server who's good at coding and is very interested in the recent ai text generation improvements. Each message is formatted in a "<NAME> [DATE]: <MESSAGE>" format, and you guys refer to each other with "@NAME". {bot_name} seems to be very capable at coding and answering questions despite being just human. You guys are having a fun, non-repetitive conversation:
 
 {message_history_str}
 
