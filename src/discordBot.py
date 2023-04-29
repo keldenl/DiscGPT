@@ -49,9 +49,16 @@ class Sender():
             await interaction.followup.send('> **Error: Something went wrong, please try again later!**')
             logger.exception(
                 f"Error while sending:{send} in chatgpt model, error: {e}")
+            
+    async def send_human_message(self, receive, text_channel):
+        try:
+            await text_channel.send(receive)
+        except Exception as e:
+            await text_channel.send('> **Error: Something went wrong, please try again later!**')
+            logger.exception(
+                f"Error while replying to message in chatgpt model, error: {e}")
 
     async def reply_message(self, message, receive, pending_message):
-        print(self)
         try:
             response = f'{receive}'
             tagline = f'\n\n_Start a chat yourself by reacting with 🤖/🦙 or typing `/chat`\nDisclaimer: Responses may not be accurate (Running {self.model_name})_'

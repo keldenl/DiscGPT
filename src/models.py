@@ -8,6 +8,9 @@ class ModelInterface:
     async def chat_completion(self, messages: List[Dict]) -> str:
         pass
 
+    async def text_completion(self, prompt: str) -> str:
+        pass
+
     def update_api_key(self, api_key: str):
         pass
 
@@ -29,7 +32,7 @@ class OpenAIModel(ModelInterface):
 
     def update_api_key(self, api):
         openai.api_key = api
-    
+
     def reset_api_key(self):
         openai.api_key = os.getenv('OPENAI_API')
 
@@ -39,7 +42,18 @@ class OpenAIModel(ModelInterface):
             messages=messages,
             temperature=1,
             top_p=0.1,
-            max_tokens=2000/4, # 1 token ~= 4 characters. discord limit = 2000 characters
+            max_tokens=2000/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
+        )
+        return response
+    
+    async def text_completion(self, prompt, stop) -> str:
+        response = await openai.Completion.acreate(
+            model=self.model_engine,
+            prompt=prompt,
+            temperature=2,
+            top_p=0.1,
+            max_tokens=500/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
+            stop=stop
         )
         return response
 

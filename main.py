@@ -35,7 +35,7 @@ def run():
             return
         await interaction.response.defer()
         receive = await chatgpt.get_response_with_system(
-            user_id, system_message, message, think)
+            interaction.user, system_message, message, think)
         await sender.send_message(interaction, message, receive, system_message, think, hide_system_thoughts)
 
     # Personalities
@@ -95,6 +95,20 @@ def run():
         await system_chat(interaction, system_message, message, think)
         chatgpt.reset_api_key()
 
+    @client.tree.command(name="autocomplete", description="Autocomplete your sentence")
+    async def autocomplete(interaction: discord.Interaction, *, prompt: str, stop_on: Optional[str]=None, same_line:bool=False):
+        if interaction.user == client.user:
+            return
+        await interaction.response.defer()
+        await interaction.followup.send("> " + prompt )
+        receive = await chatgpt.get_text_completion(prompt, stop_on, same_line)
+        if len(receive) > 2000:
+            await interaction.followup.send(receive[:2000])
+            await interaction.followup.send(receive[2000:])
+        else:
+            await interaction.followup.send(receive)
+
+
     @client.tree.command(name="reset", description="Reset ChatGPT conversation history")
     async def reset(interaction: discord.Interaction):
         user_id = interaction.user.id
@@ -118,39 +132,43 @@ def run():
 
         if reaction.emoji == '🦙':
             pending_message = await message.reply(f'🦙 _{bot_name} is typing..._')
-            receive = await chatgpt.get_response(user.id, content)
+            receive = await chatgpt.get_text_completion(user.id, content)
+            await sender.reply_message(message, receive, pending_message)
+            return
+        if reaction.emoji == '➕':
+            pending_message = await message.reply(f'➕ _{bot_name} is typing..._')
+            receive = await chatgpt.get_text_completion(content)
             await sender.reply_message(message, receive, pending_message)
             return
         if reaction.emoji == '🥜':
             pending_message = await message.reply(f'🥜 _{bot_name} is typing..._')
             plug = plugins['deez_nuts']
-            receive = await chatgpt.get_response_with_system(user.id, plug['system_message'], content, plug['think'], plug['examples'])
+            receive = await chatgpt.get_response_with_system(message.author, plug['system_message'], content, plug['think'], plug['examples'])
             await sender.reply_message(message, receive, pending_message)
             return
         if reaction.emoji == '🤖':
             channel = message.channel
-            messages = [message async for message in channel.history(limit=15)]
-            messageHistory = []
+            messages = [message async for message in channel.history(limit=30)]
+            message_history = []
             for i, msg in enumerate(messages):
                 if msg.id == message.id:
-                    messageHistory = messages[i+1:i+11]
+                    message_history = messages[i:i+25]
+            
+            message_history.reverse()
+            message_history_str = "\n".join(f"{'You' if m.author.name == bot_name else m.author.name}: {m.content}" for m in message_history)
+            authors = [message.author for message in message_history if message.author.name != bot_name]
+            authors = list(set(authors))
+            # <@{author.id}>
+            author_names = ", ".join(f"{author.name}" for author in authors)
 
-            examples = []
-            for m in messageHistory:
-                message_dict = {'role': f'user ({m.author.name})', 'content': m.content}
-                examples.append(message_dict)
-            # examples.append(
-            #     {'role': 'system', 'content': f'This is a conversation in the text channel #{message.channel.name} in the gpt-llama.cpp discord server.'})
-            examples.reverse()
-            print(examples)
+            prompt = f"""You, {author_names} are users on a public #{message.channel.name} channel of a discord server. Your name is {bot_name}. You guys are having a fun conversations:
+{message_history_str}
+You:"""
 
-            pending_message = await message.reply(f'🤖 _{bot_name} is typing..._')
-            plug = plugins['discord_user']
-            chatgpt.update_api_key('../llama.cpp/models/vicuna/7B/ggml-vicuna-7b-4bit-rev1.bin')
-
-            receive = await chatgpt.get_response_with_system(user.id, plug['system_message'], content, None, examples)
-            await sender.reply_message(message, receive.lower(), pending_message)
-            chatgpt.reset_api_key()
+            async with channel.typing():
+                receive = await chatgpt.get_text_completion(prompt, '\n', True)
+                receive = ':robot:' if len(receive) == 0 else receive
+            await sender.send_human_message(receive.lower(), channel)
             return
 
     # ImageGen not supported
