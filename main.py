@@ -184,7 +184,7 @@ A: """
 
     @client.event
     async def on_message(message):
-        response_probability = 0 # 0.1 = 10% chance of responding if not directly mentioning the bot
+        response_probability = 0.2 # 0.1 = 10% chance of responding if not directly mentioning the bot
 
         # don't react to system message or unreadable messages
         if message.content == '':
