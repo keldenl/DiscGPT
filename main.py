@@ -184,7 +184,7 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
             response = await chatgpt.get_text_completion_stream(prompt, '\n\n', True)
             receive = ''
             queued_chunks = 0
-            max_queue_chunks = 14
+            max_queue_chunks = 7
 
             async for chunk in response:
                 if chunk['choices'][0]['finish_reason']:
