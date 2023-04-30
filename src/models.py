@@ -56,7 +56,7 @@ class OpenAIModel(ModelInterface):
             prompt=prompt,
             temperature=2,
             top_p=0.1,
-            max_tokens=750/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
+            max_tokens=1000/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
             stop=stop
         )
         return response
@@ -67,7 +67,7 @@ class OpenAIModel(ModelInterface):
             prompt=prompt,
             temperature=2,
             top_p=0.1,
-            max_tokens=750/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
+            max_tokens=1000/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
             stop=stop,
             stream=True
         )

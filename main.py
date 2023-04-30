@@ -34,7 +34,6 @@ def run():
 
 
     # Utils
-
     async def system_chat(interaction: discord.Interaction, system_message: str, message: str, think: Optional[str] = None, hide_system_thoughts: Optional[bool] = False):
         user_id = interaction.user.id  # username: interaction.user.name
         if interaction.user == client.user:
@@ -42,7 +41,24 @@ def run():
         await interaction.response.defer()
         receive = await chatgpt.get_response_with_system(
             interaction.user, system_message, message, think)
-        await sender.send_message(interaction, message, receive, system_message, think, hide_system_thoughts)
+        await sender.send_message(message, receive, system_message, think, hide_system_thoughts)
+
+                    
+    async def use_plugin(user, channel, message, input, prompt, response_type='completion', stop_on=None, same_line=None):
+        async with channel.typing():
+            if user == client.user:
+                return
+
+            if message is None:
+                message = await sender.send_human_message(f'> <@{user.id}>: _{input}_', channel)
+            
+            if response_type == 'chat':
+                receive = await chatgpt.get_response_with_system(user, prompt, input)
+            else:
+                receive = await chatgpt.get_text_completion(prompt, stop_on, same_line)
+                
+            return await sender.reply_message(message, receive)
+
 
     # Personalities
     plugins = {
@@ -82,24 +98,64 @@ def run():
 
     @client.tree.command(name="chat", description=f'Have a chat with {bot_name}')
     async def chat(interaction: discord.Interaction, *, message: str):
-        user_id = interaction.user.id  # username: interaction.user.name
-        if interaction.user == client.user:
-            return
-        await interaction.response.defer()
-        receive = await chatgpt.get_response(
-            user_id, message)
-        await sender.send_message(interaction, message, receive)
+        prompt = f"You are {bot_name}, a large language model trained by Meta. You are currently chatting with a user in a public discord server called gpt-llama.cpp. Follow the user's instructions carefully."
+        await use_plugin(interaction.user, interaction.channel, None, message, prompt, 'chat')
 
     @client.tree.command(name="ask", description=f"Ask {bot_name} about gpt-llama.cpp ")
     async def system_cmd(interaction: discord.Interaction, *, question: str):
-        system_message = f"You are {bot_name}, an assistant for the open source project 'gpt-llama.cpp'. You are currently chatting with a user in a public discord server called gpt-llama.cpp, and youpowered by a gpt-llama.cpp server.\n\n<INFORMATION on gpt-llama.cpp>\ngpt-llama.cpp is a local API server that simulates OpenAI's API GPT endpoints using local llama-based models to process requests. Link to repo: https://github.com/keldenl/gpt-llama.cpp.  It is compatible with Windows, Linux, and MacOS platforms. To use gpt-llama.cpp, llama.cpp project setup is required. Link to llama.cpp: https://github.com/ggerganov/llama.cpp. Installation instructions can be found at https://github.com/keldenl/gpt-llama.cpp#quickstart-installation. Note that gpt-llama.cpp cannot work without setting up the llama.cpp project separately, and llama model downloads are not provided. For support or to view validated supported applications, visit https://github.com/keldenl/gpt-llama.cpp#supported-applications. If you encounter issues, create an issue in GitHub at https://github.com/keldenl/gpt-llama.cpp/issues or post in Discord on #help-forums or #live-troubleshooting. Confirmed supported gpt-projects: chatbot-ui, auto-gpt (not perfect but functioning), ChatGPT-Siri, ChatGPT-Discord-Bot, see readme for more info. Best performing models from  best to worse is vicuna>gpt4-x-alpaca, gpt4all, Alpaca Native, Alpaca LoRA, Base Llama.\n\nCommon Issues:\nq-'Readstream is not defined' a-'make sure your system node version is >= 18'\nq-'openai wrong api key' a-'make sure you set the value of the openai_api_key in gpt-powered app's .env to the path to your llama model. make sure the gpt-powered app making request to your localhost gpt-llama.cpp server'\nq-'what to set openai_api_key?'a-'absolute path or relative to specifically your gpt-llama.cpp folder. i.e. on mac absolute: ~/documents/llama.cpp/models/ggml.bin, relative: ../llama.cpp/models.ggml.bin if your gpt-llama.cpp and llama.cpp folders are next to each other'\n\nYour responses is based on <INFORMATION on gpt-llama.cpp> provided above, do not answer questions about gpt-llama.cpp beyond that knowledge. Do not provide links outside of links provided under <INFORMATION on gpt-llama.cpp>. Your responses are short and cannot exceed 150 words no matter what."
-        await system_chat(interaction, system_message, question, None, True)
+        prompt = f"""I am a highly intelligent question answering bot for the gpt-llama.cpp project. My name is {bot_name}. If you ask me a question that is in my knowledge base, I will give you the answer. If you ask me a question that is nonsense, trickery, or has no clear answer, I will respond with a variation of "I'm not sure" or "That's not relevant". Below is information about gpt-llama.cpp:
+* gpt-llama.cpp is a local API server that simulates OpenAI's API GPT endpoints using local llama-based models to process requests
+* Link to repo: https://github.com/keldenl/gpt-llama.cpp
+* It is compatible with Windows, Linux, and MacOS platforms
+* To use gpt-llama.cpp, llama.cpp project setup is required
+* Link to llama.cpp: https://github.com/ggerganov/llama.cpp
+* Installation instructions can be found at https://github.com/keldenl/gpt-llama.cpp#quickstart-installation
+* gpt-llama.cpp cannot work without setting up the llama.cpp project separately, and llama model downloads are not provided. 
+* For support or to view validated supported applications, visit https://github.com/keldenl/gpt-llama.cpp#supported-applications
+* If you encounter issues, create an issue in GitHub at https://github.com/keldenl/gpt-llama.cpp/issues or post in Discord on #help-forums or #live-troubleshooting. 
+* Confirmed supported gpt-projects: chatbot-ui, auto-gpt (not perfect but functioning), ChatGPT-Siri, ChatGPT-Discord-Bot, see readme for more info. 
+* Best performing models from  best to worse is wizard 7b > vicuna > gpt4-x-alpaca > gpt4all > Alpaca Native > Alpaca LoRA > Base Llama.
+
+Q: What's the link to the repo?
+A: You can find `gpt-llama.cpp` at <https://github.com/keldenl/gpt-llama.cpp>
+
+Q: I'm getting 'Readstream is not defined'
+A: Make sure your system node version is >= 18. Readstream isn't supported for any older node versions.
+
+Q: What's 1+1?
+A: That's not relevant. If you want to chat, use that /chat function or mention {bot_name} in your message.
+
+Q: Getting 'openai wrong api key'
+A: Make sure you set the value of the openai_api_key in gpt-powered app's .env to the path to your llama model. Also make sure the gpt-powered app making request to your localhost gpt-llama.cpp server
+
+Q: Does gpt-llama.cpp support GPU?
+A: Not as of now, ooba's text-generation-ui is a better project to GPU heavy hardware
+
+Q: What to set openai_api_key to?
+is `xxx-xxx` okay?
+A: No. It should be set to an absolute path or relative path to specifically your gpt-llama.cpp folder. 
+For example, on mac 
+absolute: ~/documents/llama.cpp/models/ggml.bin
+relative: ../llama.cpp/models.ggml.bin if your gpt-llama.cpp and llama.cpp folders are next to each other
+
+Q: Who's bob?
+A: I'm not sure...
+
+Q: {question}
+A: """
+        await use_plugin(interaction.user, interaction.channel, None, question, prompt, '\n\n', True)
 
     @client.tree.command(name="chat_advanced", description="Have a custom chat with a system message")
     async def system_cmd(interaction: discord.Interaction, *, system_message: str, message: str, think: Optional[str] = None):
         chatgpt.update_api_key('../llama.cpp/models/vicuna/7B/ggml-vicuna-7b-4bit-rev1.bin')
         await system_chat(interaction, system_message, message, think)
         chatgpt.reset_api_key()
+
+    @client.tree.command(name="debug", description="Debug an error log")
+    async def debug_cmd(interaction: discord.Interaction, *, error_message: str, think: Optional[str] = None):
+        prompt = f"{error_message}\n\nExplanation of what the error means and potential solution:"
+        await interaction.response.defer()
+        await use_plugin(interaction.user, interaction.channel, None, error_message, prompt, '\n\n')
 
     @client.tree.command(name="autocomplete", description="Autocomplete your sentence")
     async def autocomplete(interaction: discord.Interaction, *, prompt: str, stop_on: Optional[str]=None, same_line:bool=False):
@@ -128,7 +184,7 @@ def run():
 
     @client.event
     async def on_message(message):
-        response_probability = 0.1 # 0.1 = 10% chance of responding if not directly mentioning the bot
+        response_probability = 0 # 0.1 = 10% chance of responding if not directly mentioning the bot
 
         # don't react to system message or unreadable messages
         if message.content == '':
@@ -197,13 +253,9 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
 
                 if queued_chunks > max_queue_chunks:
                     queued_chunks = 0
-                    res_message = await sender.send_human_message_stream(receive, res_message, channel)
-            return 
-                    
-    async def use_plugin(message, content, stop_on=None, same_line=None):
-        receive = await chatgpt.get_text_completion(content, stop_on, same_line)
-        await sender.reply_message(message, receive)
-        return
+                    if len(receive) > 0:
+                        res_message = await sender.send_human_message_stream(receive, res_message, channel)
+
 
     @client.event
     async def on_reaction_add(reaction, user):
@@ -217,27 +269,60 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
 
         if reaction.emoji == '🦙':
             async with channel.typing():
-                receive = await chatgpt.get_text_completion(user.id, content)
-                await sender.reply_message(message, receive)
+                prompt = f"""I am a highly intelligent question answering bot for the gpt-llama.cpp project. My name is {bot_name}. If you ask me a question that is in my knowledge base, I will give you the answer. If you ask me a question that is nonsense, trickery, or has no clear answer, I will respond with a variation of "I'm not sure" or "That's not relevant". Below is information about gpt-llama.cpp:
+* gpt-llama.cpp is a local API server that simulates OpenAI's API GPT endpoints using local llama-based models to process requests
+* Link to repo: https://github.com/keldenl/gpt-llama.cpp
+* It is compatible with Windows, Linux, and MacOS platforms
+* To use gpt-llama.cpp, llama.cpp project setup is required
+* Link to llama.cpp: https://github.com/ggerganov/llama.cpp
+* Installation instructions can be found at https://github.com/keldenl/gpt-llama.cpp#quickstart-installation
+* gpt-llama.cpp cannot work without setting up the llama.cpp project separately, and llama model downloads are not provided. 
+* For support or to view validated supported applications, visit https://github.com/keldenl/gpt-llama.cpp#supported-applications
+* If you encounter issues, create an issue in GitHub at https://github.com/keldenl/gpt-llama.cpp/issues or post in Discord on #help-forums or #live-troubleshooting. 
+* Confirmed supported gpt-projects: chatbot-ui, auto-gpt (not perfect but functioning), ChatGPT-Siri, ChatGPT-Discord-Bot, see readme for more info. 
+* Best performing models from  best to worse is wizard 7b > vicuna > gpt4-x-alpaca > gpt4all > Alpaca Native > Alpaca LoRA > Base Llama.
+
+Q: What's the link to the repo?
+A: You can find `gpt-llama.cpp` at <https://github.com/keldenl/gpt-llama.cpp>
+
+Q: I'm getting 'Readstream is not defined'
+A: Make sure your system node version is >= 18. Readstream isn't supported for any older node versions.
+
+Q: What's 1+1?
+A: That's not relevant. If you want to chat, use that /chat function or mention {bot_name} in your message.
+
+Q: Getting 'openai wrong api key'
+A: Make sure you set the value of the openai_api_key in gpt-powered app's .env to the path to your llama model. Also make sure the gpt-powered app making request to your localhost gpt-llama.cpp server
+
+Q: Does gpt-llama.cpp support GPU?
+A: Not as of now, ooba's text-generation-ui is a better project to GPU heavy hardware
+
+Q: What to set openai_api_key to?
+is `xxx-xxx` okay?
+A: No. It should be set to an absolute path or relative path to specifically your gpt-llama.cpp folder. 
+For example, on mac 
+absolute: ~/documents/llama.cpp/models/ggml.bin
+relative: ../llama.cpp/models.ggml.bin if your gpt-llama.cpp and llama.cpp folders are next to each other
+
+Q: Who's bob?
+A: I'm not sure...
+
+Q: {content}
+A: """
+                await use_plugin(message.author, channel, message, content, prompt, '\n\n', True)
                 return
         if reaction.emoji == '➕':
-            async with channel.typing():
-                chatgpt.update_api_key('../llama.cpp/models/vicuna/13B/ggml-vic13b-uncensored-q5_1.bin')
-                receive = await chatgpt.get_text_completion(content)
-                await sender.reply_message(message, receive)
-                chatgpt.reset_api_key()
-                return
+            await use_plugin(message.author, channel, message, content, content)
         if reaction.emoji == '🐞':
             prompt = f"{content}\n\nExplanation of what the error means and potential solution:\n"
-            async with channel.typing():
-                await use_plugin(message, prompt, '#')
-                return
+            await use_plugin(message.author, channel, message, content, prompt, '#')
+
         if reaction.emoji == '🥜':
-            async with channel.typing():
-                plug = plugins['deez_nuts']
-                receive = await chatgpt.get_response_with_system(message.author, plug['system_message'], content, plug['think'], plug['examples'])
-                await sender.reply_message(message, receive)
-                return
+            await use_plugin(message.author, channel, message, content, f"{plugins['deez_nuts']['system_message']}\n\nExample:\nQ: {content}\nA:")
+            # plug = plugins['deez_nuts']
+            # receive = await chatgpt.get_response_with_system(message.author, plug['system_message'], content, plug['think'], plug['examples'])
+            # await sender.reply_message(message, receive)
+            # return
 #         if reaction.emoji == '🤖':
 #             # Get last 30 messages in the channel
 #             messages = [message async for message in channel.history(limit=30)]

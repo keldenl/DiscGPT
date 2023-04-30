@@ -33,25 +33,25 @@ class Sender():
     bot_name = os.getenv('BOT_NAME')
     model_name = os.getenv('MODEL_NAME')
 
-    async def send_message(self, interaction, send, receive, system_message=None, think=None, hide_system_thoughts=False):
+    async def send_message(self, query_message, receive, system_message=None, think=None, hide_system_thoughts=False):
         try:
-            user_id = interaction.user.id
             system_msg = '' if hide_system_thoughts or system_message is None else f'> _**SYSTEM**: {system_message}_\n> \n'
             think_msg = '' if hide_system_thoughts or think is None else f'> _[@{self.bot_name} thinking: {think}]_\n> \n'
-            query = f'> <@{str(user_id)}>:  _{send}_\n\n'
+            query = f'> <@{str(query_message.author.id)}>:  _{query_message}_\n\n'
             response = f'**@{self.bot_name}:**\n{receive}'
             tagline = f'\n\n_Start a chat yourself by reacting with 🤖/🦙 or typing `/chat`\nDisclaimer: Responses may not be accurate (Running {self.model_name})_'
             if random.random() < 0.1:
                 response = response + tagline
-            await interaction.followup.send('🤖\n' + system_msg + query + think_msg + response)
-            logger.info(f"{user_id} sent: {send}, response: {receive}")
+            await query_message.reply('🤖\n' + system_msg + query + think_msg + response)
+            # logger.info(f"{user_id} sent: {send}, response: {receive}")
         except Exception as e:
-            await interaction.followup.send('> **Error: Something went wrong, please try again later!**')
+            await query_message.reply('> **Error: Something went wrong, please try again later!**')
             logger.exception(
                 f"Error while sending:{send} in chatgpt model, error: {e}")
             
     async def send_human_message(self, receive, text_channel):
         try:
+            print('send: ', receive)
             return await text_channel.send(receive)
         except Exception as e:
             await text_channel.send('> **Error: Something went wrong, please try again later!**')
@@ -60,6 +60,7 @@ class Sender():
             
     async def send_human_message_stream(self, receive, message, channel):
         try:
+            print('send stream: ', receive)
             if message is None:
                 res_message = await self.send_human_message(receive, channel)
                 return res_message
