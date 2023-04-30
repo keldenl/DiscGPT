@@ -181,24 +181,26 @@ def run():
 You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
         res_message = None
         async with channel.typing():
-            response = chatgpt.get_text_completion_stream(prompt, '\n\n', True)
+            response = await chatgpt.get_text_completion_stream(prompt, '\n\n', True)
             receive = ''
             queued_chunks = 0
             max_queue_chunks = 14
 
-            for chunk in response:
+            async for chunk in response:
                 if chunk['choices'][0]['finish_reason']:
                     receive = ':no_mouth:' if len(receive) == 0 else receive # response with :no_mouth: if the response failed
-                    await sender.send_human_message_stream(receive, res_message, channel)
+                    await sender.send_human_message_stream(utils.replace_string(receive, authors_name_to_id), res_message, channel)
                     continue
 
                 curr_chunk = chunk['choices'][0]['delta']['content'].lower()
                 receive = receive + curr_chunk
                 queued_chunks += 1
-                
+
                 if queued_chunks > max_queue_chunks:
                     queued_chunks = 0
                     res_message = await sender.send_human_message_stream(receive, res_message, channel)
+            return 
+                    
 
     @client.event
     async def on_reaction_add(reaction, user):

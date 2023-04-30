@@ -69,12 +69,12 @@ class ChatGPT:
         content = response['choices'][0]['text']['content']
         return content
     
-    def get_text_completion_stream(self, prompt:str, stop_on:Optional[str]=None, same_line:bool=False) -> str:
+    async def get_text_completion_stream(self, prompt:str, stop_on:Optional[str]=None, same_line:bool=False) -> str:
         if not same_line:
             prompt = prompt + "\n"
             if not stop_on:
                 stop_on = '\n\n'
-        response = self.model.text_completion_stream(prompt, stop=stop_on)
+        response = await self.model.text_completion_stream(prompt, stop=stop_on)
         return response
 
     def clean_history(self, user_id: str) -> None:

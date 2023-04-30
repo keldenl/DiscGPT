@@ -11,7 +11,7 @@ class ModelInterface:
     async def text_completion(self, prompt: str) -> str:
         pass
 
-    def text_completion_stream (self, prompt: str) -> str:
+    async def text_completion_stream (self, prompt: str) -> str:
         pass
 
 
@@ -61,8 +61,8 @@ class OpenAIModel(ModelInterface):
         )
         return response
     
-    def text_completion_stream(self, prompt, stop) -> str:
-        response = openai.Completion.create(
+    async def text_completion_stream(self, prompt, stop) -> str:
+        response = await openai.Completion.acreate(
             model=self.model_engine,
             prompt=prompt,
             temperature=2,
