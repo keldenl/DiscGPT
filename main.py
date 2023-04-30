@@ -114,7 +114,6 @@ def run():
         else:
             await interaction.followup.send(receive)
 
-
     @client.tree.command(name="reset", description="Reset ChatGPT conversation history")
     async def reset(interaction: discord.Interaction):
         user_id = interaction.user.id
@@ -129,7 +128,7 @@ def run():
 
     @client.event
     async def on_message(message):
-        response_probability = 0.2 # 0.2 = 20% chance of response
+        response_probability = 0.1 # 0.1 = 10% chance of responding if not directly mentioning the bot
 
         # don't react to system message or unreadable messages
         if message.content == '':
@@ -201,6 +200,10 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
                     res_message = await sender.send_human_message_stream(receive, res_message, channel)
             return 
                     
+    async def use_plugin(message, content, stop_on=None, same_line=None):
+        receive = await chatgpt.get_text_completion(content, stop_on, same_line)
+        await sender.reply_message(message, receive)
+        return
 
     @client.event
     async def on_reaction_add(reaction, user):
@@ -219,8 +222,15 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
                 return
         if reaction.emoji == '➕':
             async with channel.typing():
+                chatgpt.update_api_key('../llama.cpp/models/vicuna/13B/ggml-vic13b-uncensored-q5_1.bin')
                 receive = await chatgpt.get_text_completion(content)
                 await sender.reply_message(message, receive)
+                chatgpt.reset_api_key()
+                return
+        if reaction.emoji == '🐞':
+            prompt = f"{content}\n\nExplanation of what the error means and potential solution:\n"
+            async with channel.typing():
+                await use_plugin(message, prompt, '#')
                 return
         if reaction.emoji == '🥜':
             async with channel.typing():
