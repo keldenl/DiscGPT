@@ -52,11 +52,25 @@ class Sender():
             
     async def send_human_message(self, receive, text_channel):
         try:
-            await text_channel.send(receive)
+            return await text_channel.send(receive)
         except Exception as e:
             await text_channel.send('> **Error: Something went wrong, please try again later!**')
             logger.exception(
                 f"Error while replying to message in chatgpt model, error: {e}")
+            
+    async def send_human_message_stream(self, receive, message, channel):
+        try:
+            if message is None:
+                res_message = await self.send_human_message(receive, channel)
+                return res_message
+            else:
+                await message.edit(content=receive)
+                return message
+        except Exception as e:
+            await message.edit('> **Error: Something went wrong, please try again later!**')
+            logger.exception(
+                f"Error while replying to message in chatgpt model, error: {e}")
+            return message
 
     async def reply_message(self, message, receive, pending_message=None):
         try:

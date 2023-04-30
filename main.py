@@ -4,6 +4,8 @@ load_dotenv()
 import os
 import discord
 import random
+import asyncio
+
 from datetime import datetime
 from typing import Optional
 from src.discordBot import DiscordClient, Sender
@@ -46,7 +48,7 @@ def run():
     plugins = {
         'deez_nuts': {
             # 'system_message': 'Respond to each user message with a deez nuts joke. A deez nuts joke is when you rephrase the original message by adding the words DEEZ NUTZ in it. The response is intended to confuse the user and be funny.',
-            'system_message': 'Analyze user message and rephrase it so the message contains the phrase "DEEZ NUTS" and makes contextual sense. It makes contextual sense when either an object in the original message is replaced with "deez nuts" or a word in the original message that sounds like "deez" is replaced with "deez nuts". You may also rephrase other words to make the response mildy sexual, like suck resulting in "suck on deez nuts" or goblin resulting in "gobbling deez nuts" or pudding resulting in "pudding deez nuts in your mouth".',
+            'system_message': 'Convert messages to DEEZ NUTS jokes. DEEZ NUTS jokes rephrase messages to containt the phrase "DEEZ NUTS" and make contextual sense. Contextual sense is when either an object in the original message is replaced with "deez nuts" or a word in the original message that sounds like "deez" is replaced with "deez nuts". You may also rephrase other words to make the response mildy sexual, like suck resulting in "suck on deez nuts" or goblin resulting in "gobbling deez nuts" or pudding resulting in "pudding deez nuts in your mouth".',
             'examples': [
                 {'role': 'user', 'content': 'can you hold this for me'},
                 {'role': 'think', 'content': 'nuts are something you can hold. rephrasing..'},
@@ -127,7 +129,7 @@ def run():
 
     @client.event
     async def on_message(message):
-        response_probability = 0.25
+        response_probability = 0.2 # 0.2 = 20% chance of response
 
         # don't react to system message or unreadable messages
         if message.content == '':
@@ -177,12 +179,26 @@ def run():
 {message_history_str}
 
 You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
+        res_message = None
         async with channel.typing():
-            receive = await chatgpt.get_text_completion(prompt, '\n\n', True)
-            receive = ':no_mouth:' if len(receive) == 0 else receive # response with :no_mouth: if the response failed
-        await sender.send_human_message(utils.replace_string(receive, authors_name_to_id).lower(), channel)
-        return
+            response = chatgpt.get_text_completion_stream(prompt, '\n\n', True)
+            receive = ''
+            queued_chunks = 0
+            max_queue_chunks = 14
 
+            for chunk in response:
+                if chunk['choices'][0]['finish_reason']:
+                    receive = ':no_mouth:' if len(receive) == 0 else receive # response with :no_mouth: if the response failed
+                    await sender.send_human_message_stream(receive, res_message, channel)
+                    continue
+
+                curr_chunk = chunk['choices'][0]['delta']['content'].lower()
+                receive = receive + curr_chunk
+                queued_chunks += 1
+                
+                if queued_chunks > max_queue_chunks:
+                    queued_chunks = 0
+                    res_message = await sender.send_human_message_stream(receive, res_message, channel)
 
     @client.event
     async def on_reaction_add(reaction, user):

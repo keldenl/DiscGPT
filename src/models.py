@@ -11,6 +11,10 @@ class ModelInterface:
     async def text_completion(self, prompt: str) -> str:
         pass
 
+    def text_completion_stream (self, prompt: str) -> str:
+        pass
+
+
     def update_api_key(self, api_key: str):
         pass
 
@@ -54,6 +58,18 @@ class OpenAIModel(ModelInterface):
             top_p=0.1,
             max_tokens=750/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
             stop=stop
+        )
+        return response
+    
+    def text_completion_stream(self, prompt, stop) -> str:
+        response = openai.Completion.create(
+            model=self.model_engine,
+            prompt=prompt,
+            temperature=2,
+            top_p=0.1,
+            max_tokens=750/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
+            stop=stop,
+            stream=True
         )
         return response
 
