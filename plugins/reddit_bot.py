@@ -7,21 +7,36 @@ def get_prompt(query: str, user: str) -> str:
 
     if response.status_code == 200:
         json_data = response.json()
-        top_post = json_data['data']['children'][1]['data']
+        idx = 0
+        posts = json_data['data']['children']
+
+        # Filter out stickied posts
+        for p in posts:
+            if p['data']['stickied']:
+                idx += 1
+            else :
+                break
+
+        top_post = posts[idx]['data']
         title = top_post['title']
+        url = top_post['permalink']
         self_text = top_post['selftext']
-        url = top_post['url']
+
+        # If there's no text content, it must have a link?
+        if len(self_text) == 0:
+            self_text = top_post['url']
+
         prompt = f"""Title: {title}
 Subreddit: {query}
-Link: {url}
+Link: https://www.reddit.com{url}
 
 Content:
 {self_text[:2000]}
 
 -----
+Provide the link to the post and summarize the post for the user @{user}. If the content is also a link, provide that after the summary:
 
-Summarize this for a second-grade student @{user}. Provide the link to the post upfront:
-Link:"""
+Post Link: """
         return prompt
     else:
         print(response)
