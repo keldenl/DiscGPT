@@ -69,7 +69,7 @@ def run():
     async def system_cmd(interaction: discord.Interaction, *, subreddit: str):
         await interaction.response.defer()
         prompt = reddit_bot.get_prompt(subreddit, interaction.user.name)
-        await use_plugin(interaction.user, interaction.channel, None, subreddit, prompt, "completion", '\n\n', True)
+        await use_plugin(interaction.user, interaction.channel, None, subreddit, prompt, "completion", '\n\n\n', True)
 
     @ client.tree.command(name="debug", description="Debug your error log")
     async def debug_cmd(interaction: discord.Interaction, *, error_message: str):
@@ -96,8 +96,8 @@ def run():
     async def on_message(message):
         channel = message.channel
 
-        blacklist = set(['announcements', 'rules', 'changelog', 'bot-spam'])
-        # graylist = set(['bot-spam'])
+        blacklist = set(['announcements', 'rules', 'changelog'])
+        graylist = set(['bot-spam'])
 
         # 0.1 = 10% chance of responding if not directly mentioning the bot
         response_probability = 0.1
@@ -119,12 +119,19 @@ def run():
         r = random.random()
         message.type == "Message"
 
-        bot_not_mentioned = bot_name.lower() not in message.content.lower(
-        ) and f'<@{client.user.id}>' not in message.content
+        bot_mentioned = bot_name.lower() in message.content.lower() or f'<@{client.user.id}>' in message.content
         is_reply_to_bot = message.reference is not None and message.reference.resolved.author == client.user
-        # is_graylist = channel.name in graylist
-        if (not is_reply_to_bot) and bot_not_mentioned and r > response_probability:
-            return
+        is_graylist = channel.name in graylist
+
+        # if not addressed (always reply when addressed)
+        if not(bot_mentioned or is_reply_to_bot):
+            # if channel is in graylist, never respond if not mentioned
+            if is_graylist:
+                return
+            
+            # respond randomly to only 'response_probability' of messages
+            if r > response_probability:
+                return
 
         print(f'{bot_name} auto-generating a message...')
 
@@ -172,7 +179,7 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
                     await sender.send_human_message_stream(utils.replace_string(receive, authors_name_to_id), res_message, channel)
                     continue
 
-                curr_chunk = chunk['choices'][0]['delta']['content'].lower()
+                curr_chunk = chunk['choices'][0]['delta']['content']
                 receive = receive + curr_chunk
                 queued_chunks += 1
 
