@@ -1,7 +1,9 @@
 import requests
-def get_prompt(query: str) -> str:
+
+
+def get_prompt(query: str, user: str) -> str:
     url = f"https://www.reddit.com/r/{query}.json"
-    response = requests.get(url, headers = {'User-agent': 'gpt-llama.cpp'})
+    response = requests.get(url, headers={'User-agent': 'gpt-llama.cpp'})
 
     if response.status_code == 200:
         json_data = response.json()
@@ -9,23 +11,17 @@ def get_prompt(query: str) -> str:
         title = top_post['title']
         self_text = top_post['selftext']
         url = top_post['url']
-        prompt = f"""Given information on a recent top Reddit post from r/{query}, write as if you're talking to your friend and provide a friendly explanation what your friend missed and cite your sources in the end in the following format:
-# Explanation
-<explanation to catch your friend up about the post>
-(Source: <link>)
+        prompt = f"""Title: {title}
+Subreddit: {query}
+Link: {url}
 
-Here's the reddit post's information
-# Reddit Post Information
-Title
-{title}
+Content:
+{self_text[:2000]}
 
-Link
-{url}
+-----
 
-Content
-{self_text}
-
-# Summary"""
+Summarize this for a second-grade student @{user}. Provide the link to the post upfront:
+Link:"""
         return prompt
     else:
         print(response)
