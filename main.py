@@ -17,6 +17,7 @@ from plugins import error_debugger
 from plugins import gpt_llama_cpp
 from plugins import deez_nuts
 from plugins import chatbot
+from plugins import reddit_bot
 
 
 bot_name = os.getenv('BOT_NAME')
@@ -35,13 +36,14 @@ def run():
     sender = Sender()
 
     # Utils
-    async def use_plugin(user, channel, message, input, prompt, response_type='completion', stop_on=None, same_line=None):
+    async def use_plugin(user, channel, message, input, prompt, response_type='completion', stop_on=None, same_line=None, show_prompt=False):
         async with channel.typing():
             if user == client.user:
                 return
 
             if message is None:
-                message = await sender.send_human_message(f'> _**Prompt:** {prompt}_\n\n> <@{user.id}>: _{input}_', channel)
+                preprompt = f"> _**Prompt:** {prompt}_\n\n" if show_prompt else ''
+                message = await sender.send_human_message(f'{preprompt}> <@{user.id}>: _{input}_', channel)
 
             if response_type == 'chat':
                 receive = await chatgpt.get_response_with_system(user, prompt, input)
@@ -63,6 +65,12 @@ def run():
         await interaction.response.defer()
         await use_plugin(interaction.user, interaction.channel, None, question, prompt, "completion", '\n\n', True)
 
+    @ client.tree.command(name="reddit", description=f"talk about top news of a subreddit")
+    async def system_cmd(interaction: discord.Interaction, *, subreddit: str):
+        prompt = reddit_bot.get_prompt(subreddit)
+        await interaction.response.defer()
+        await use_plugin(interaction.user, interaction.channel, None, subreddit, prompt, "completion", '#')
+
     @ client.tree.command(name="debug", description="Debug your error log")
     async def debug_cmd(interaction: discord.Interaction, *, error_message: str):
         prompt = error_debugger.get_prompt(error_message)
@@ -79,7 +87,7 @@ def run():
         chatgpt.update_api_key(
             '../llama.cpp/models/vicuna/7B/ggml-vicuna-7b-4bit-rev1.bin')
         await interaction.response.defer()
-        await use_plugin(interaction.user, interaction.channel, None, message, system_message, 'chat')
+        await use_plugin(interaction.user, interaction.channel, None, message, system_message, 'chat', None, None, True)
         chatgpt.reset_api_key()
 
 
@@ -190,13 +198,12 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
         if reaction.emoji == '🦙':
             prompt = gpt_llama_cpp.get_prompt(content, bot_name)
             await use_plugin(message.author, channel, message, content, prompt, "completion", '\n\n', True)
-        if reaction.emoji == '➕':
+        elif reaction.emoji == '➕':
             await use_plugin(message.author, channel, message, content, content)
-        if reaction.emoji == '🐞':
+        elif reaction.emoji == '🐞':
             prompt = error_debugger.get_prompt(content)
             await use_plugin(message.author, channel, message, content, prompt)
-
-        if reaction.emoji == '🥜':
+        elif reaction.emoji == '🥜':
             prompt = deez_nuts.get_prompt(content)
             await use_plugin(message.author, channel, message, content, prompt)
             
