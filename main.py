@@ -55,26 +55,26 @@ def run():
     # Commands available via "/""
     @ client.tree.command(name="chat", description=f'Chat with {bot_name}')
     async def chat(interaction: discord.Interaction, *, message: str):
-        prompt = chatbot.get_prompt(bot_name)
         await interaction.response.defer()
+        prompt = chatbot.get_prompt(bot_name)
         await use_plugin(interaction.user, interaction.channel, None, message, prompt, 'chat')
 
     @ client.tree.command(name="ask", description=f"Ask {bot_name} about gpt-llama.cpp ")
     async def system_cmd(interaction: discord.Interaction, *, question: str):
-        prompt = gpt_llama_cpp.get_prompt(question, bot_name)
         await interaction.response.defer()
+        prompt = gpt_llama_cpp.get_prompt(question, bot_name)
         await use_plugin(interaction.user, interaction.channel, None, question, prompt, "completion", '\n\n', True)
 
     @ client.tree.command(name="reddit", description=f"talk about top news of a subreddit")
     async def system_cmd(interaction: discord.Interaction, *, subreddit: str):
-        prompt = reddit_bot.get_prompt(subreddit)
         await interaction.response.defer()
-        await use_plugin(interaction.user, interaction.channel, None, subreddit, prompt, "completion", '#')
+        prompt = reddit_bot.get_prompt(subreddit, interaction.user.name)
+        await use_plugin(interaction.user, interaction.channel, None, subreddit, prompt, "completion", '\n\n', True)
 
     @ client.tree.command(name="debug", description="Debug your error log")
     async def debug_cmd(interaction: discord.Interaction, *, error_message: str):
-        prompt = error_debugger.get_prompt(error_message)
         await interaction.response.defer()
+        prompt = error_debugger.get_prompt(error_message)
         await use_plugin(interaction.user, interaction.channel, None, error_message, prompt, '\n\n')
 
     @ client.tree.command(name="autocomplete", description="Autocomplete your sentence")
@@ -94,6 +94,11 @@ def run():
     # CREATE A DISCORD BOT THAT JOINS CONVERSATIONS RANDOMLY
     @ client.event
     async def on_message(message):
+        channel = message.channel
+
+        blacklist = set(['announcements', 'rules', 'changelog', 'bot-spam'])
+        # graylist = set(['bot-spam'])
+
         # 0.1 = 10% chance of responding if not directly mentioning the bot
         response_probability = 0.1
 
@@ -104,6 +109,10 @@ def run():
         # don't react to your own messages
         if message.author == client.user:
             return
+        
+        # don't message in blacklisted channels
+        if channel.name in blacklist:
+            return
 
         # respond if addressed
         # if not addressed only respond to 10% of the messages
@@ -113,11 +122,11 @@ def run():
         bot_not_mentioned = bot_name.lower() not in message.content.lower(
         ) and f'<@{client.user.id}>' not in message.content
         is_reply_to_bot = message.reference is not None and message.reference.resolved.author == client.user
+        # is_graylist = channel.name in graylist
         if (not is_reply_to_bot) and bot_not_mentioned and r > response_probability:
             return
 
         print(f'{bot_name} auto-generating a message...')
-        channel = message.channel
 
         # Get last 30 messages in the channel
         messages = [message async for message in channel.history(limit=20)]
