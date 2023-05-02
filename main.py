@@ -18,6 +18,7 @@ from plugins import gpt_llama_cpp
 from plugins import deez_nuts
 from plugins import chatbot
 from plugins import reddit_bot
+from plugins import google
 
 
 bot_name = os.getenv('BOT_NAME')
@@ -70,6 +71,12 @@ def run():
         await interaction.response.defer()
         prompt = reddit_bot.get_prompt(subreddit, interaction.user.name)
         await use_plugin(interaction.user, interaction.channel, None, subreddit, prompt, "completion", '\n\n\n', True)
+
+    @ client.tree.command(name="google", description=f"google something")
+    async def google_cmd(interaction: discord.Interaction, *, question: str):
+        await interaction.response.defer()
+        prompt = google.get_prompt(question)
+        await use_plugin(interaction.user, interaction.channel, None, question, prompt,"completion", '\n\n', True)
 
     @ client.tree.command(name="debug", description="Debug your error log")
     async def debug_cmd(interaction: discord.Interaction, *, error_message: str):
