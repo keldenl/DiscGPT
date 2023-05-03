@@ -51,6 +51,7 @@ def run():
             if user == client.user:
                 return
 
+            await client.request_queued()
             if request_message is None:
                 preprompt = f"🤖\n> _**Prompt:** {prompt}_\n > \n" if show_prompt else '🤖\n'
                 request_message = await sender.send_message(f'{preprompt}> <@{user.id}>: _{input}_', channel, **kwargs)
@@ -61,6 +62,7 @@ def run():
                 receive = await chatgpt.get_text_completion(prompt, **kwargs)
 
         await sender.reply_message(request_message, receive)
+        await client.request_done()
 
     # Commands available via "/""
     @ client.tree.command(name="chat", description=f'Chat with {bot_name}')
@@ -195,6 +197,8 @@ def run():
 You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
         res_message = None
         async with channel.typing():
+            await client.request_queued()
+
             response = await chatgpt.get_text_completion_stream(prompt, '\n\n')
             receive = ''
             queued_chunks = 0
@@ -216,6 +220,7 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
                         res_message = await sender.send_human_message_stream(receive, res_message, channel)
 
         # send the final message
+        await client.request_done()
         await sender.send_human_message_stream(utils.replace_string(receive, authors_name_to_id), res_message, channel)
         
 
