@@ -111,7 +111,7 @@ def run():
     async def on_message(message):
         channel = message.channel
 
-        blacklist = set(['announcements', 'rules', 'changelog'])
+        blacklist = set(['announcements', 'rules', 'changelog', '#help-forum'])
         graylist = set(['bot-spam'])
 
         # 0.1 = 10% chance of responding if not directly mentioning the bot
