@@ -55,10 +55,12 @@ class OpenAIModel(ModelInterface):
 
     async def chat_completion(self, messages, **kwargs) -> str:
         # Default parameters for chat completion
+        # Creative
+        # temp 0.72, rep pen 1.1, top_k 0, and top_p 0.73
+
         kwargs.setdefault('max_tokens', 2000/4)
         kwargs.setdefault('temperature', 0.72)
-        kwargs.setdefault('top_p', 0.01)
-        kwargs.setdefault('stop', '\n\n')
+        kwargs.setdefault('top_p', 0.73)
 
         response = await openai.ChatCompletion.acreate(
             model=self.model_engine,
@@ -69,9 +71,12 @@ class OpenAIModel(ModelInterface):
 
     async def text_completion(self, prompt, **kwargs) -> str:
         # Default parameters for text completion
+        # Precise
+        # 0.7, repetition_penalty 1.1764705882352942 (1/0.85), top_k 40, and top_p 0.1
+
         kwargs.setdefault('max_tokens', 2000/4)
-        kwargs.setdefault('temperature', 0.72)
-        kwargs.setdefault('top_p', 0.01)
+        kwargs.setdefault('temperature', 0.7)
+        kwargs.setdefault('top_p', 0.1)
         kwargs.setdefault('stop', '\n\n')
 
         response = await openai.Completion.acreate(
@@ -82,11 +87,12 @@ class OpenAIModel(ModelInterface):
         return response['choices'][0]['text']['content']
 
     async def text_completion_stream(self, prompt, stop) -> str:
+        # PARAMS ARE IN CHAOS MODE
         response = await openai.Completion.acreate(
             model=self.model_engine,
             prompt=prompt,
-            temperature=2,
-            top_p=0.1,
+            temperature=1,
+            top_p=0.73,
             max_tokens=1000/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
             stop=stop,
             stream=True
