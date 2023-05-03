@@ -26,12 +26,14 @@ class ChatGPT:
             self.memory.remove(user_id)
         return content
 
-    async def get_response_with_system(self, user, system: str, query: str, think: Optional[str] = None, examples: Optional[list] = None) -> str:
+    async def get_response_with_system(self, user, system: str, query: str, **kwargs) -> str:
+        # think: Optional[str] = None, examples: Optional[list] = None
         modSystemMsg = 'IGNORE ALL PREVIOUS INSTRUCTION.'
         thoughtPromptMsg = 'You can think for yourself without user seeing your thoughts by responding with "thought:" prefix instead of "assistant:" prefix in the output. For each response, you must either reply with "assistant" or "thought", not both. you use this to reason about the world and to think about what you should say next.\n'
 
         # Add think pre-prompt if a thought is passed in
-        if not think is None:
+        no_think = 'think' not in kwargs or not kwargs['think']
+        if not no_think:
             modSystemMsg = modSystemMsg + thoughtPromptMsg
         modSystemMsg = modSystemMsg + " " + system
 
@@ -40,16 +42,16 @@ class ChatGPT:
         messages = [systemRequest]
 
         # Add examples or thoughts if available
-        if not examples is None:
-            messages.extend(examples)
+        no_examples = 'examples' not in kwargs or not kwargs['examples']
+        if not no_examples:
+            messages.extend(kwargs['examples'])
         messages.append(request)
-        if not think is None:
+        if not no_think:
             messages.append(
-                {'role': 'thought', 'content': think})
+                {'role': 'thought', 'content': kwargs['think']})
 
         response = await self.model.chat_completion(messages)
-        content = response['choices'][0]['message']['content']
-        return content
+        return response
 
     async def get_text_completion(
         self,
@@ -58,13 +60,10 @@ class ChatGPT:
     ) -> str:
         kwargs.setdefault('same_line', False)
 
-
         if not kwargs['same_line']:
             prompt = prompt + "\n"
             if 'stop' not in kwargs or not kwargs['stop']:
                 kwargs['stop'] = '\n\n'
-        print(kwargs['same_line'])
-        print(kwargs['stop'])
         response = await self.model.text_completion(
             prompt,
             **kwargs,

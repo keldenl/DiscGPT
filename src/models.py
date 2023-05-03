@@ -5,7 +5,14 @@ import openai
 
 
 class ModelInterface:
-    async def chat_completion(self, messages: List[Dict]) -> str:
+    async def chat_completion(
+        self,
+        messages: List[Dict],
+        max_tokens: float,
+        temperature: float,
+        top_p: float,
+        stop: str
+    ) -> str:
         pass
 
     async def text_completion(
@@ -46,15 +53,19 @@ class OpenAIModel(ModelInterface):
     def reset_api_key(self):
         openai.api_key = os.getenv('OPENAI_API')
 
-    async def chat_completion(self, messages) -> str:
+    async def chat_completion(self, messages, **kwargs) -> str:
+        # Default parameters for chat completion
+        kwargs.setdefault('max_tokens', 2000/4)
+        kwargs.setdefault('temperature', 0.72)
+        kwargs.setdefault('top_p', 0.01)
+        kwargs.setdefault('stop', '\n\n')
+
         response = await openai.ChatCompletion.acreate(
             model=self.model_engine,
             messages=messages,
-            temperature=1,
-            top_p=0.1,
-            max_tokens=2000/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
+            **kwargs
         )
-        return response
+        return response['choices'][0]['message']['content']
 
     async def text_completion(self, prompt, **kwargs) -> str:
         # Default parameters for text completion
@@ -62,11 +73,6 @@ class OpenAIModel(ModelInterface):
         kwargs.setdefault('temperature', 0.72)
         kwargs.setdefault('top_p', 0.01)
         kwargs.setdefault('stop', '\n\n')
-
-        print(kwargs.get('max_tokens'))
-        print(kwargs.get('temperature'))
-        print(kwargs.get('top_p'))
-        print(kwargs.get('stop'))
 
         response = await openai.Completion.acreate(
             model=self.model_engine,

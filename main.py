@@ -52,8 +52,8 @@ def run():
                 return
 
             if request_message is None:
-                preprompt = f"🤖\n> _**Prompt:** {prompt}_\n\n" if show_prompt else '🤖\n'
-                request_message = await sender.send_human_message(f'{preprompt}> <@{user.id}>: _{input}_', channel)
+                preprompt = f"🤖\n> _**Prompt:** {prompt}_\n > \n" if show_prompt else '🤖\n'
+                request_message = await sender.send_message(f'{preprompt}> <@{user.id}>: _{input}_', channel, **kwargs)
 
             if response_type == 'chat':
                 receive = await chatgpt.get_response_with_system(user, prompt, input,  **kwargs)
@@ -74,7 +74,7 @@ def run():
         chatgpt.update_api_key(
             '../llama.cpp/models/vicuna/7B/ggml-vicuna-7b-4bit-rev1.bin')
         await interaction.response.defer()
-        await use_plugin(interaction.user, interaction.channel, message, system_message, response_type='chat', think=think)
+        await use_plugin(interaction.user, interaction.channel, message, system_message, response_type='chat', think=think, show_prompt=True)
         chatgpt.reset_api_key()
 
     @ client.tree.command(name="ask", description=f"Ask {bot_name} about gpt-llama.cpp ")
@@ -237,7 +237,7 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
             await use_plugin(message.author, channel, content, prompt, request_message=message)
         elif reaction.emoji == '🥜':
             prompt = deez_nuts.get_prompt(content)
-            await use_plugin(message.author, channel, content, prompt, request_message=message)
+            await use_plugin(message.author, channel, content, prompt, request_message=message, temperature=40)
 
     client.run(os.getenv('DISCORD_TOKEN'))
 
