@@ -10,7 +10,7 @@ headers = {
     "Accept-Language": "en-US,en;q=0.9,lt;q=0.8,et;q=0.7,de;q=0.6",
 }
 
-def scrape_search(query: str, page=1):
+def scrape_search(query: str, page=1, max_results=4):
     """scrape search results for a given keyword"""
     url = f"https://www.google.com/search?hl=en&q={query}" + (
         f"&start={10*(page-1)}" if page > 1 else "")
@@ -43,16 +43,17 @@ def scrape_search(query: str, page=1):
 
         results.append({'title': title, 'link': link, 'snippet': snippet})
     
-    result_str = '\n\n'.join([f"Title: {d['title']}\nLink: {d['link']}\nSnippet: {d['snippet']}" for d in results])
-    return result_str
+    return results[:max_results]
 
 
 def get_prompt(query:str) -> str:
-    results = scrape_search(query)
+    results = scrape_search(query, max_results=4)
+    result_str = '\n\n'.join([f"Title: {d['title']}\nLink: {d['link']}\nSnippet: {d['snippet']}" for d in results])
     return f"""Web search results:
-{results}
+{result_str}
 
 Current date: {datetime.now().strftime('%H:%M:%S %m-%d-%Y')}
-Instructions: Using the provided web search results, write a comprehensive reply to the given query. Make sure to cite results using (Source: (URL)) notation after the reference. If the provided search results refer to multiple subjects with the same name, write separate answers for each subject.
+Instructions: Using the provided web search results, write a comprehensive reply to the given query. Make sure to cite results using (Source: <URL>) notation after the reference. If the provided search results refer to multiple subjects with the same name, write separate answers for each subject.
+
 Query: {query}
 Answer:"""
