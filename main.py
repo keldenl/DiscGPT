@@ -69,8 +69,8 @@ def run():
         prompt = chatbot.get_prompt(bot_name)
         await use_plugin(interaction.user, interaction.channel, message, prompt, response_type='chat')
 
-    @ client.tree.command(name="chat_advanced", description="Have a custom chat with a system message")
-    async def system_cmd(interaction: discord.Interaction, *, system_message: str, message: str, think: Optional[str] = None):
+    @ client.tree.command(name="chat_pro", description="Have a custom chat with a system message")
+    async def chat_pro_cmd(interaction: discord.Interaction, *, system_message: str, message: str, think: Optional[str] = None):
         chatgpt.update_api_key(
             '../llama.cpp/models/vicuna/7B/ggml-vicuna-7b-4bit-rev1.bin')
         await interaction.response.defer()
@@ -78,13 +78,13 @@ def run():
         chatgpt.reset_api_key()
 
     @ client.tree.command(name="ask", description=f"Ask {bot_name} about gpt-llama.cpp ")
-    async def system_cmd(interaction: discord.Interaction, *, question: str):
+    async def ask_cmd(interaction: discord.Interaction, *, question: str):
         await interaction.response.defer()
         prompt = gpt_llama_cpp.get_prompt(question, bot_name)
         await use_plugin(interaction.user, interaction.channel, question, prompt, response_type="completion", stop='\n\n', same_line=True)
 
     @ client.tree.command(name="reddit", description=f"talk about top news of a subreddit")
-    async def system_cmd(interaction: discord.Interaction, *, subreddit: str):
+    async def reddit_cmd(interaction: discord.Interaction, *, subreddit: str):
         await interaction.response.defer()
         prompt = reddit_bot.get_prompt(subreddit, interaction.user.name)
         await use_plugin(interaction.user, interaction.channel, subreddit, prompt, response_type="completion", stop='\n\n\n', same_line=True)
