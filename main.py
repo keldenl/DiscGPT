@@ -60,21 +60,21 @@ def run():
             else:
                 receive = await chatgpt.get_text_completion(prompt, **kwargs)
 
-            return await sender.reply_message(request_message, receive)
+        await sender.reply_message(request_message, receive)
 
     # Commands available via "/""
     @ client.tree.command(name="chat", description=f'Chat with {bot_name}')
-    async def chat(interaction: discord.Interaction, *, message: str):
+    async def chat(interaction: discord.Interaction, *, message: str, temperature: Optional[str] = None):
         await interaction.response.defer()
         prompt = chatbot.get_prompt(bot_name)
-        await use_plugin(interaction.user, interaction.channel, message, prompt, response_type='chat')
+        await use_plugin(interaction.user, interaction.channel, message, prompt, response_type='chat', temperature=temperature)
 
     @ client.tree.command(name="chat_pro", description="Have a custom chat with a system message")
-    async def chat_pro_cmd(interaction: discord.Interaction, *, system_message: str, message: str, think: Optional[str] = None):
+    async def chat_pro_cmd(interaction: discord.Interaction, *, system_message: str, message: str, think: Optional[str] = None, temperature: Optional[str] = None):
         chatgpt.update_api_key(
             '../llama.cpp/models/vicuna/7B/ggml-vicuna-7b-4bit-rev1.bin')
         await interaction.response.defer()
-        await use_plugin(interaction.user, interaction.channel, message, system_message, response_type='chat', think=think, show_prompt=True)
+        await use_plugin(interaction.user, interaction.channel, message, system_message, response_type='chat', think=think, show_prompt=True, temperature=temperature)
         chatgpt.reset_api_key()
 
     @ client.tree.command(name="ask", description=f"Ask {bot_name} about gpt-llama.cpp ")
@@ -174,7 +174,7 @@ def run():
         # Replace author bot_name with 'You' for the prompt
         # Replace bot responses (starting with 🤖) with "Bot" author. This is so we don't confuse "you" with being the bot
         message_history_str = "\n\n".join(
-            f"{'Bot' if m.content.startswith('🤖') else f'You ({bot_name})' if m.author.name == bot_name else m.author.name} [{m.created_at.strftime('%H:%M:%S %m-%d-%Y')}]:\n{utils.replace_string(m.content, authors_id_to_name)}" for m in message_history)
+            f"{'DISCORD BOT' if m.content.startswith('🤖') else f'You ({bot_name})' if m.author.name == bot_name else m.author.name} [{m.created_at.strftime('%H:%M:%S %m-%d-%Y')}]:\n{utils.replace_string(m.content, authors_id_to_name)}" for m in message_history)
 
         prompt = f"""You, {author_names} are users on a public #{message.channel.name} channel of a discord server. You are {bot_name}, an active and fun discord member of the server who's good at coding and is very interested in the recent ai text generation improvements. Each message is formatted in a "<NAME> [DATE]: <MESSAGE>" format, and you guys refer to each other with "@NAME". {bot_name} seems to be very capable at coding and answering questions despite being just human. You guys are having a fun, non-repetitive conversation:
 
@@ -192,8 +192,7 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
                 if chunk['choices'][0]['finish_reason']:
                     # response with :no_mouth: if the response failed
                     receive = ':no_mouth:' if len(receive) == 0 else receive
-                    await sender.send_human_message_stream(utils.replace_string(receive, authors_name_to_id), res_message, channel)
-                    continue
+                    break
 
                 curr_chunk = chunk['choices'][0]['delta']['content']
                 receive = receive + curr_chunk
@@ -203,6 +202,10 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
                     queued_chunks = 0
                     if len(receive) > 0:
                         res_message = await sender.send_human_message_stream(receive, res_message, channel)
+
+        # send the final message
+        await sender.send_human_message_stream(utils.replace_string(receive, authors_name_to_id), res_message, channel)
+        
 
     # @ client.tree.command(name="reset", description="Reset ChatGPT conversation history")
     # async def reset(interaction: discord.Interaction):
