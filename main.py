@@ -183,7 +183,7 @@ def run():
 You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
         res_message = None
         async with channel.typing():
-            response = await chatgpt.get_text_completion_stream(prompt, '\n\n', True)
+            response = await chatgpt.get_text_completion_stream(prompt, '\n\n')
             receive = ''
             queued_chunks = 0
             max_queue_chunks = 7
