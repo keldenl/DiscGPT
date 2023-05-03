@@ -14,9 +14,9 @@ class DiscordClient(discord.Client):
         self.synced = False
         self.added = False
         self.tree = discord.app_commands.CommandTree(self)
+        self.requestQueue = 0
         self.activity = discord.Activity(
-            type=discord.ActivityType.watching, name="/chat | 🦙 react | /chat-advanced")
-
+            type=discord.ActivityType.streaming, name=f"{self.requestQueue} requests")
 
     async def on_ready(self):
         await self.wait_until_ready()
@@ -27,6 +27,18 @@ class DiscordClient(discord.Client):
         if not self.added:
             self.added = True
         logger.info(f"Synced, {self.user} is running!")
+
+    async def request_queued(self):
+        self.requestQueue += 1
+        self.activity = discord.Activity(
+            type=discord.ActivityType.streaming, name=f"{self.requestQueue} requests")
+        await super().change_presence(activity=self.activity)
+        
+    async def request_done(self):
+        self.requestQueue -= 1
+        self.activity = discord.Activity(
+            type=discord.ActivityType.streaming, name=f"{self.requestQueue} requests")
+        await super().change_presence(activity=self.activity)
 
 
 class Sender():
