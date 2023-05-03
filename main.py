@@ -115,7 +115,7 @@ def run():
         graylist = set(['bot-spam'])
 
         # 0.1 = 10% chance of responding if not directly mentioning the bot
-        response_probability = 0.1
+        response_probability = 0.05
 
         # don't react to system message or unreadable messages
         if message.content == '':
