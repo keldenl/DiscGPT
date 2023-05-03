@@ -66,44 +66,56 @@ def run():
     @ client.tree.command(name="chat", description=f'Chat with {bot_name}')
     async def chat(interaction: discord.Interaction, *, message: str, temperature: Optional[str] = None):
         await interaction.response.defer()
+        await interaction.delete_original_response()
+
         prompt = chatbot.get_prompt(bot_name)
         await use_plugin(interaction.user, interaction.channel, message, prompt, response_type='chat', temperature=temperature)
 
     @ client.tree.command(name="chat_pro", description="Have a custom chat with a system message")
     async def chat_pro_cmd(interaction: discord.Interaction, *, system_message: str, message: str, think: Optional[str] = None, temperature: Optional[str] = None):
+        await interaction.response.defer()
+        await interaction.delete_original_response()
+
         chatgpt.update_api_key(
             '../llama.cpp/models/vicuna/7B/ggml-vicuna-7b-4bit-rev1.bin')
-        await interaction.response.defer()
         await use_plugin(interaction.user, interaction.channel, message, system_message, response_type='chat', think=think, show_prompt=True, temperature=temperature)
         chatgpt.reset_api_key()
 
     @ client.tree.command(name="ask", description=f"Ask {bot_name} about gpt-llama.cpp ")
     async def ask_cmd(interaction: discord.Interaction, *, question: str):
         await interaction.response.defer()
+        await interaction.delete_original_response()
+
         prompt = gpt_llama_cpp.get_prompt(question, bot_name)
         await use_plugin(interaction.user, interaction.channel, question, prompt, response_type="completion", stop='\n\n', same_line=True)
 
     @ client.tree.command(name="reddit", description=f"talk about top news of a subreddit")
     async def reddit_cmd(interaction: discord.Interaction, *, subreddit: str):
         await interaction.response.defer()
+        await interaction.delete_original_response()
+
         prompt = reddit_bot.get_prompt(subreddit, interaction.user.name)
         await use_plugin(interaction.user, interaction.channel, subreddit, prompt, response_type="completion", stop='\n\n\n', same_line=True)
 
     @ client.tree.command(name="google", description=f"google something")
     async def google_cmd(interaction: discord.Interaction, *, question: str):
         await interaction.response.defer()
+        await interaction.delete_original_response()
+        
         prompt = google.get_prompt(question)
         await use_plugin(interaction.user, interaction.channel, question, prompt, response_type="completion", stop='\n\n', same_line=True)
 
     @ client.tree.command(name="debug", description="Debug your error log")
     async def debug_cmd(interaction: discord.Interaction, *, error_message: str):
         await interaction.response.defer()
+        await interaction.delete_original_response()
         prompt = error_debugger.get_prompt(error_message)
         await use_plugin(interaction.user, interaction.channel, error_message, prompt, stop='\n\n')
 
     @ client.tree.command(name="autocomplete", description="Autocomplete your sentence")
     async def autocomplete_cmd(interaction: discord.Interaction, *, prompt: str, stop_on: Optional[str] = None, same_line: bool = False):
         await interaction.response.defer()
+        await interaction.delete_original_response()
         await use_plugin(interaction.user, interaction.channel, prompt, prompt, stop=stop_on, same_line=same_line)
 
     # CREATE A DISCORD BOT THAT JOINS CONVERSATIONS RANDOMLY
