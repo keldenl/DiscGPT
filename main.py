@@ -37,66 +37,74 @@ def run():
     sender = Sender()
 
     # Utils
-    async def use_plugin(user, channel, message, input, prompt, response_type='completion', stop_on=None, same_line=None, show_prompt=False):
+    async def use_plugin(
+        user,
+        channel,
+        input,
+        prompt,
+        request_message=None,  # User's original message
+        response_type: Optional[str] = 'completion',  # 'completion' or 'chat'
+        show_prompt: Optional[bool] = False,
+        **kwargs
+    ):
         async with channel.typing():
             if user == client.user:
                 return
 
-            if message is None:
-                preprompt = f"> _**Prompt:** {prompt}_\n\n" if show_prompt else ''
-                message = await sender.send_human_message(f'{preprompt}> <@{user.id}>: _{input}_', channel)
+            if request_message is None:
+                preprompt = f"🤖\n> _**Prompt:** {prompt}_\n\n" if show_prompt else '🤖\n'
+                request_message = await sender.send_human_message(f'{preprompt}> <@{user.id}>: _{input}_', channel)
 
             if response_type == 'chat':
-                receive = await chatgpt.get_response_with_system(user, prompt, input)
+                receive = await chatgpt.get_response_with_system(user, prompt, input,  **kwargs)
             else:
-                receive = await chatgpt.get_text_completion(prompt, stop_on, same_line)
+                receive = await chatgpt.get_text_completion(prompt, **kwargs)
 
-            return await sender.reply_message(message, receive)
+            return await sender.reply_message(request_message, receive)
 
     # Commands available via "/""
     @ client.tree.command(name="chat", description=f'Chat with {bot_name}')
     async def chat(interaction: discord.Interaction, *, message: str):
         await interaction.response.defer()
         prompt = chatbot.get_prompt(bot_name)
-        await use_plugin(interaction.user, interaction.channel, None, message, prompt, 'chat')
+        await use_plugin(interaction.user, interaction.channel, message, prompt, response_type='chat')
+
+    @ client.tree.command(name="chat_advanced", description="Have a custom chat with a system message")
+    async def system_cmd(interaction: discord.Interaction, *, system_message: str, message: str, think: Optional[str] = None):
+        chatgpt.update_api_key(
+            '../llama.cpp/models/vicuna/7B/ggml-vicuna-7b-4bit-rev1.bin')
+        await interaction.response.defer()
+        await use_plugin(interaction.user, interaction.channel, message, system_message, response_type='chat', think=think)
+        chatgpt.reset_api_key()
 
     @ client.tree.command(name="ask", description=f"Ask {bot_name} about gpt-llama.cpp ")
     async def system_cmd(interaction: discord.Interaction, *, question: str):
         await interaction.response.defer()
         prompt = gpt_llama_cpp.get_prompt(question, bot_name)
-        await use_plugin(interaction.user, interaction.channel, None, question, prompt, "completion", '\n\n', True)
+        await use_plugin(interaction.user, interaction.channel, question, prompt, response_type="completion", stop='\n\n', same_line=True)
 
     @ client.tree.command(name="reddit", description=f"talk about top news of a subreddit")
     async def system_cmd(interaction: discord.Interaction, *, subreddit: str):
         await interaction.response.defer()
         prompt = reddit_bot.get_prompt(subreddit, interaction.user.name)
-        await use_plugin(interaction.user, interaction.channel, None, subreddit, prompt, "completion", '\n\n\n', True)
+        await use_plugin(interaction.user, interaction.channel, subreddit, prompt, response_type="completion", stop='\n\n\n', same_line=True)
 
     @ client.tree.command(name="google", description=f"google something")
     async def google_cmd(interaction: discord.Interaction, *, question: str):
         await interaction.response.defer()
         prompt = google.get_prompt(question)
-        await use_plugin(interaction.user, interaction.channel, None, question, prompt,"completion", '\n\n', True)
+        await use_plugin(interaction.user, interaction.channel, question, prompt, response_type="completion", stop='\n\n', same_line=True)
 
     @ client.tree.command(name="debug", description="Debug your error log")
     async def debug_cmd(interaction: discord.Interaction, *, error_message: str):
         await interaction.response.defer()
         prompt = error_debugger.get_prompt(error_message)
-        await use_plugin(interaction.user, interaction.channel, None, error_message, prompt, '\n\n')
+        await use_plugin(interaction.user, interaction.channel, error_message, prompt, stop='\n\n')
 
     @ client.tree.command(name="autocomplete", description="Autocomplete your sentence")
-    async def autocomplete_cmd(interaction: discord.Interaction, *, prompt: str, stop_on: Optional[str]=None, same_line: bool=False):
+    async def autocomplete_cmd(interaction: discord.Interaction, *, prompt: str, stop_on: Optional[str] = None, same_line: bool = False):
         await interaction.response.defer()
-        await use_plugin(interaction.user, interaction.channel, None, prompt, prompt, 'completion', stop_on, same_line)
-
-    @ client.tree.command(name="chat_advanced", description="Have a custom chat with a system message")
-    async def system_cmd(interaction: discord.Interaction, *, system_message: str, message: str, think: Optional[str]=None):
-        chatgpt.update_api_key(
-            '../llama.cpp/models/vicuna/7B/ggml-vicuna-7b-4bit-rev1.bin')
-        await interaction.response.defer()
-        await use_plugin(interaction.user, interaction.channel, None, message, system_message, 'chat', None, None, True)
-        chatgpt.reset_api_key()
-
+        await use_plugin(interaction.user, interaction.channel, prompt, prompt, stop=stop_on, same_line=same_line)
 
     # CREATE A DISCORD BOT THAT JOINS CONVERSATIONS RANDOMLY
     @ client.event
@@ -116,7 +124,7 @@ def run():
         # don't react to your own messages
         if message.author == client.user:
             return
-        
+
         # don't message in blacklisted channels
         if channel.name in blacklist:
             return
@@ -126,16 +134,17 @@ def run():
         r = random.random()
         message.type == "Message"
 
-        bot_mentioned = bot_name.lower() in message.content.lower() or f'<@{client.user.id}>' in message.content
+        bot_mentioned = bot_name.lower() in message.content.lower(
+        ) or f'<@{client.user.id}>' in message.content
         is_reply_to_bot = message.reference is not None and message.reference.resolved.author == client.user
         is_graylist = channel.name in graylist
 
         # if not addressed (always reply when addressed)
-        if not(bot_mentioned or is_reply_to_bot):
+        if not (bot_mentioned or is_reply_to_bot):
             # if channel is in graylist, never respond if not mentioned
             if is_graylist:
                 return
-            
+
             # respond randomly to only 'response_probability' of messages
             if r > response_probability:
                 return
@@ -220,16 +229,16 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
 
         if reaction.emoji == '🦙':
             prompt = gpt_llama_cpp.get_prompt(content, bot_name)
-            await use_plugin(message.author, channel, message, content, prompt, "completion", '\n\n', True)
+            await use_plugin(message.author, channel, content, prompt, request_message=message, response_type="completion", stop='\n\n', same_line=True)
         elif reaction.emoji == '➕':
-            await use_plugin(message.author, channel, message, content, content)
+            await use_plugin(message.author, channel, message, content, request_message=message)
         elif reaction.emoji == '🐞':
             prompt = error_debugger.get_prompt(content)
-            await use_plugin(message.author, channel, message, content, prompt)
+            await use_plugin(message.author, channel, content, prompt, request_message=message)
         elif reaction.emoji == '🥜':
             prompt = deez_nuts.get_prompt(content)
-            await use_plugin(message.author, channel, message, content, prompt)
-            
+            await use_plugin(message.author, channel, content, prompt, request_message=message)
+
     client.run(os.getenv('DISCORD_TOKEN'))
 
 

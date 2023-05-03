@@ -1,6 +1,6 @@
 import os
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 import openai
 
 
@@ -8,12 +8,18 @@ class ModelInterface:
     async def chat_completion(self, messages: List[Dict]) -> str:
         pass
 
-    async def text_completion(self, prompt: str) -> str:
+    async def text_completion(
+        self,
+        prompt: str,
+        max_tokens: float,
+        temperature: float,
+        top_p: float,
+        stop: str
+    ) -> str:
         pass
 
-    async def text_completion_stream (self, prompt: str) -> str:
+    async def text_completion_stream(self, prompt: str) -> str:
         pass
-
 
     def update_api_key(self, api_key: str):
         pass
@@ -49,18 +55,26 @@ class OpenAIModel(ModelInterface):
             max_tokens=2000/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
         )
         return response
-    
-    async def text_completion(self, prompt, stop) -> str:
+
+    async def text_completion(self, prompt, **kwargs) -> str:
+        # Default parameters for text completion
+        kwargs.setdefault('max_tokens', 2000/4)
+        kwargs.setdefault('temperature', 0.72)
+        kwargs.setdefault('top_p', 0.01)
+        kwargs.setdefault('stop', '\n\n')
+
+        print(kwargs.get('max_tokens'))
+        print(kwargs.get('temperature'))
+        print(kwargs.get('top_p'))
+        print(kwargs.get('stop'))
+
         response = await openai.Completion.acreate(
             model=self.model_engine,
             prompt=prompt,
-            temperature=2,
-            top_p=0.1,
-            max_tokens=1000/4,  # 1 token ~= 4 characters. discord limit = 2000 characters
-            stop=stop
+            **kwargs
         )
-        return response
-    
+        return response['choices'][0]['text']['content']
+
     async def text_completion_stream(self, prompt, stop) -> str:
         response = await openai.Completion.acreate(
             model=self.model_engine,
