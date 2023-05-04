@@ -12,6 +12,7 @@ from datetime import datetime
 import asyncio
 import random
 import discord
+from discord.ext import tasks
 import os
 from plugins import error_debugger
 from plugins import gpt_llama_cpp
@@ -19,6 +20,9 @@ from plugins import deez_nuts
 from plugins import chatbot
 from plugins import reddit_bot
 from plugins import google
+from plugins import web
+from plugins import pygmalion
+from plugins import social_agi
 
 
 bot_name = os.getenv('BOT_NAME')
@@ -45,6 +49,8 @@ def run():
         request_message=None,  # User's original message
         response_type: Optional[str] = 'completion',  # 'completion' or 'chat'
         show_prompt: Optional[bool] = False,
+        require_request_message: Optional[bool] = True,
+        response_prefix: Optional[str] = '',
         **kwargs
     ):
         async with channel.typing():
@@ -52,7 +58,7 @@ def run():
                 return
 
             await client.request_queued()
-            if request_message is None:
+            if require_request_message and request_message is None:
                 preprompt = f"🤖\n> _**Prompt:** {prompt}_\n > \n" if show_prompt else '🤖\n'
                 request_message = await sender.send_message(f'{preprompt}> <@{user.id}>: _{input}_', channel, **kwargs)
 
@@ -61,7 +67,10 @@ def run():
             else:
                 receive = await chatgpt.get_text_completion(prompt, **kwargs)
 
-        await sender.reply_message(request_message, receive)
+        if require_request_message:
+            await sender.reply_message(request_message, response_prefix + receive)
+        else:
+            await sender.send_message(response_prefix + receive, channel)
         await client.request_done()
 
     # Commands available via "/""
@@ -82,6 +91,12 @@ def run():
             '../llama.cpp/models/vicuna/7B/ggml-vicuna-7b-4bit-rev1.bin')
         await use_plugin(interaction.user, interaction.channel, message, system_message, response_type='chat', think=think, show_prompt=True, temperature=temperature)
         chatgpt.reset_api_key()
+
+    @ client.tree.command(name="autocomplete", description="Autocomplete your sentence")
+    async def autocomplete_cmd(interaction: discord.Interaction, *, prompt: str, stop_on: Optional[str] = None, same_line: bool = False):
+        await interaction.response.defer()
+        await interaction.delete_original_response()
+        await use_plugin(interaction.user, interaction.channel, prompt, prompt, stop=stop_on, same_line=same_line)
 
     @ client.tree.command(name="ask", description=f"Ask {bot_name} about gpt-llama.cpp ")
     async def ask_cmd(interaction: discord.Interaction, *, question: str):
@@ -106,6 +121,14 @@ def run():
         
         prompt = google.get_prompt(question)
         await use_plugin(interaction.user, interaction.channel, question, prompt, response_type="completion", stop='\n\n', same_line=True)
+    
+    @ client.tree.command(name="ask_website", description=f"get answers based on a source website")
+    async def web_ask_cmd(interaction: discord.Interaction, *, url: str, question: str):
+        await interaction.response.defer()
+        await interaction.delete_original_response()
+        
+        prompt = web.get_prompt(url, question)
+        await use_plugin(interaction.user, interaction.channel, question, prompt, response_type="completion", stop='\n\n', same_line=True)
 
     @ client.tree.command(name="debug", description="Debug your error log")
     async def debug_cmd(interaction: discord.Interaction, *, error_message: str):
@@ -114,18 +137,24 @@ def run():
         prompt = error_debugger.get_prompt(error_message)
         await use_plugin(interaction.user, interaction.channel, error_message, prompt, stop='\n\n')
 
-    @ client.tree.command(name="autocomplete", description="Autocomplete your sentence")
-    async def autocomplete_cmd(interaction: discord.Interaction, *, prompt: str, stop_on: Optional[str] = None, same_line: bool = False):
+    @ client.tree.command(name="roleplay", description="Roleplay conversation")
+    async def rp_cmd(interaction: discord.Interaction, *, character_name: str, persona: str, scenario: str, message: str):
         await interaction.response.defer()
         await interaction.delete_original_response()
-        await use_plugin(interaction.user, interaction.channel, prompt, prompt, stop=stop_on, same_line=same_line)
+
+        chatgpt.update_api_key(
+            '../llama.cpp/models/pygmalion/7B/ggml-model-q5_1.bin')
+        prompt = pygmalion.get_prompt(character_name, persona, scenario, message)
+        await use_plugin(interaction.user, interaction.channel, message, prompt, temperature=0.95, stop=['You:'])
+        chatgpt.reset_api_key()
+
 
     # CREATE A DISCORD BOT THAT JOINS CONVERSATIONS RANDOMLY
     @ client.event
     async def on_message(message):
         channel = message.channel
 
-        blacklist = set(['announcements', 'rules', 'changelog', '#help-forum'])
+        blacklist = set(['announcements', 'rules', 'changelog', 'help-forum', 'sentient-bots'])
         graylist = set(['bot-spam'])
 
         # 0.1 = 10% chance of responding if not directly mentioning the bot
@@ -221,7 +250,7 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
 
         # send the final message
         await client.request_done()
-        await sender.send_human_message_stream(utils.replace_string(receive, authors_name_to_id), res_message, channel)
+        await sender.send_human_message_stream(utils.replace_string(receive, authors_name_to_id).lower(), res_message, channel)
         
 
     # @ client.tree.command(name="reset", description="Reset ChatGPT conversation history")
@@ -257,7 +286,50 @@ You ({bot_name}) [{datetime.now().strftime('%H:%M:%S %m-%d-%Y')}]:"""
             await use_plugin(message.author, channel, content, prompt, request_message=message)
         elif reaction.emoji == '🥜':
             prompt = deez_nuts.get_prompt(content)
-            await use_plugin(message.author, channel, content, prompt, request_message=message, temperature=40)
+            await use_plugin(message.author, channel, content, prompt, request_message=message, temperature=1)
+
+
+
+    # TASK LOOPS
+    @tasks.loop(seconds=60)
+    # sentient bots channel id 1103394781041786980
+    
+    async def reddit_updates():
+        return
+        response_probability = 1
+        r = random.random()
+        if r > response_probability:
+            print('Skipping sending sentient message')
+            return
+
+        print('Sending sentient message')
+        chatgpt.update_api_key('../llama.cpp/models/pygmalion/7B/ggml-model-q5_1.bin')
+        channel = await client.fetch_channel(1103394781041786980)
+        user = await client.fetch_user(184534707000573952)
+        messages = [message async for message in channel.history(limit=2)]
+        response_author = messages[1].content.split(': ')[0]
+        prompt = await social_agi.get_prompt('ELIZA', 'ALICE', response_author, channel)
+
+
+        await use_plugin(user, channel, None, prompt, require_request_message=False, temperature=0.9, top_p=1.3, same_line=True, stop='\n', response_prefix=f"{response_author}: ")
+        chatgpt.reset_api_key()
+        return
+        # print('## SEARCHING AND POSTING REDDIT UPDATES')
+        # subreddit_list = ['localllama', 'machinelearning', 'chatgpt', 'pygmalionai', 'openai']
+        # subreddit = random.choice(subreddit_list)
+        # prompt = reddit_bot.get_prompt(subreddit, bot_name)
+        # channel = await client.fetch_channel(1099452096383832155)
+        # user = await client.fetch_user(184534707000573952)
+        # request_message = await sender.send_message(f'**Time to check out `r/{subreddit}` for news!**', channel)
+        # await use_plugin(user, channel, subreddit, prompt, response_type="completion", request_message=request_message, stop='\n\n\n', same_line=True)
+
+    # On bot ready
+    @client.event
+    async def on_ready():
+        reddit_updates.start()
+        await client.sync()
+        print("Bot ready.")
+    
 
     client.run(os.getenv('DISCORD_TOKEN'))
 

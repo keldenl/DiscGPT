@@ -1,10 +1,10 @@
 def get_prompt(input: str) -> str:
     return f"""Convert normal messages to "DEEZ NUTS" jokes. 
 All "DEEZ NUTS" jokes follow the following rules:
-    - "DEEZ" is used instead of "these", or "my", or "those"
-    - "NUTS" refer to male testicles in a humorous tone. "that" can be referring to nuts
-    - A DEEZ NUTS joke is a rephrasing of a sentence to include the phrase "DEEZ NUTS", followed by laughing
-    - Not all inputs work, when they don't, preempt your out: with "this is a stretch, but"
+- "DEEZ" is used instead of "these", or "my", or "those"
+- "NUTS" refer to male testicles in a humorous tone. "that" can be referring to nuts
+- A DEEZ NUTS joke is a rephrasing of a sentence to include the phrase "DEEZ NUTS", followed by laughing
+- Not all inputs work, when they don't, preempt your out: with "this is a stretch, but"
 
 in: Something came in the mail today
 ||explanation: male tesitcles can *cum*, so DEEZ NUTS could *come* in your mailbox!||

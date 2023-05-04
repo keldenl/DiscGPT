@@ -18,7 +18,7 @@ class DiscordClient(discord.Client):
         self.activity = discord.Activity(
             type=discord.ActivityType.streaming, name=f"{self.requestQueue} requests")
 
-    async def on_ready(self):
+    async def sync(self):
         await self.wait_until_ready()
         logger.info("Syncing")
         if not self.synced:
@@ -49,7 +49,7 @@ class Sender():
         try:
             no_think = 'think' not in kwargs or not kwargs['think']
             think_msg = '' if no_think else f'\n> ||_@{self.bot_name} thinking: {kwargs["think"]}_||'
-            return await text_channel.send(receive + think_msg)
+            return await text_channel.send(content=receive + think_msg, tts=True)
         except Exception as e:
             await text_channel.send('> **Error: Something went wrong, please try again later!**')
             logger.exception(
