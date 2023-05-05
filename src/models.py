@@ -84,7 +84,7 @@ class OpenAIModel(ModelInterface):
             prompt=prompt,
             **kwargs
         )
-        return response['choices'][0]['text']['content']
+        return response['choices'][0]['text']
 
     async def text_completion_stream(self, prompt, stop) -> str:
         # PARAMS ARE IN CHAOS MODE
